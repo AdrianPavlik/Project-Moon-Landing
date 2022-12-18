@@ -1,0 +1,659 @@
+let container, renderer, scene;
+
+const MAX_CAMERA_DISTANCE = 7000
+const MIN_CAMERA_DISTANCE = 500
+
+const universeImage = 'texture/universe.jpg'
+const sunImage = 'texture/sun.jpg'
+const earthImage = 'texture/earth.jpg'
+const moonImage = 'texture/moon.jpg'
+
+// Scene objects
+let physicalObjects = [];
+let universe, sun, earth, moon;
+let moonRotation, moonTrajectory, moonTrajectoryLine;
+
+//Light
+let sunLight;
+let ambientLight;
+
+//Time
+let clock = new THREE.Clock();
+let prevDate = Date.now();
+let deltatime = 0;
+let gameTime = 0;
+
+// Camera
+let camera;
+
+// Interaction
+let cameraControls;
+let keyboard;
+let controller;
+
+// Physics
+const G = 6.674e-1;
+let world;
+let physicalMaterial;
+let gravityThreshold = 1.0;
+
+//Solar system - gravity/physics
+let solarSystem;
+let earthRadius = 500;
+let moonRadius = 200;
+let moonDistance = 500;
+let moonRevolveSpeed = 0.01
+let planetVisualRotationSpeed = 0.1;
+let earthMass = 2.5e7;
+let moonMass = 2.5e6;
+let atmosphereHeight = 500;
+let airFriction = 0.5;
+
+// Aircraft
+let aircraft, aircraftAsset = new THREE.Object3D();
+let startPos = new CANNON.Vec3(0, 20, 0);
+let thrust, wantsRotateN, wantsRotateS, wantsRotateW, wantsRotateE = false;
+let rotatedN, rotatedS, rotatedW, rotatedE = false;
+let thrustIntensity = 250.0;
+let torqueIntensity = 2000.0;
+let arrowHelper;
+let aircraftDryMass = 1.0;
+let maxAircraftSpeed = 2000;
+let bottomEngine, westEngine, eastEngine, southEngine, northEngine;
+
+//Loaders
+let textureLoader, gltfLoader, dracoLoader;
+
+//Wait to load whole page
+window.onload = () => {
+    init();
+    render();
+}
+
+//https://sbcode.net/view_source/physics-cannon-debug-renderer.html
+function Cube(name, sizeX, sizeY, sizeZ, position, physicalMaterial, visMat, mass) {
+    //Name
+    this.name = name;
+
+    //Add Visual object to universe
+    this.cubeGeometry = new THREE.CubeGeometry(sizeX, sizeY, sizeZ);
+    this.visual = new THREE.Mesh(this.cubeGeometry, visMat)
+    this.visual.position.copy(position)
+    this.visual.castShadow = true
+    scene.add(this.visual);
+
+    //Add Physical object to universe
+    this.sphereShape = new CANNON.Box(new CANNON.Vec3(sizeX / 2, sizeY / 2, sizeZ / 2));
+    this.body = new CANNON.Body({mass: mass, material: physicalMaterial})
+    this.body.addShape(this.sphereShape)
+    this.body.position.copy(position)
+    this.body.linearDamping = 0;
+    this.body.angularDamping = 0;
+
+    world.addBody(this.body);
+
+    this.gravityDir = new CANNON.Vec3(0, 0, 0);
+    this.enabled = true;
+
+    this.body.physicalObject = this;
+    this.visual.physicalObject = this;
+
+    physicalObjects.push(this);
+}
+
+//https://sbcode.net/view_source/physics-cannon-debug-renderer.html
+function Sphere(name, radius, position, physicalMaterial, visualMaterial, mass) {
+    //Name
+    this.name = name;
+
+    mesh = new THREE.MeshStandardMaterial({
+        map: textureLoader.load(visualMaterial),
+        roughness: 1.0,
+        side: THREE.DoubleSide
+    });
+
+    //Add Visual object to universe
+    this.sphereGeometry = new THREE.SphereGeometry(radius, 50, 50)
+    this.visual = new THREE.Mesh(this.sphereGeometry, mesh)
+    this.visual.position.copy(position)
+    this.visual.castShadow = true
+    scene.add(this.visual);
+
+    //Add Physical object to universe
+    this.sphereShape = new CANNON.Sphere(radius)
+    this.body = new CANNON.Body({mass: mass, material: physicalMaterial})
+    this.body.addShape(this.sphereShape)
+    this.body.position.copy(position)
+    this.body.linearDamping = 0;
+    this.body.angularDamping = 0;
+
+    world.addBody(this.body);
+
+    this.gravityDir = new CANNON.Vec3(0, 0, 0);
+    this.enabled = true;
+
+    this.body.physicalObject = this;
+    this.visual.physicalObject = this;
+
+    physicalObjects.push(this);
+}
+
+function SphereWithoutBody(name, radius, position, physicalMaterial, visualMaterial) {
+    //Name
+    this.name = name;
+
+    mesh = new THREE.MeshStandardMaterial({
+        map: textureLoader.load(visualMaterial),
+        roughness: 1.0,
+        side: THREE.DoubleSide
+    });
+
+    //Add Visual object to universe
+    this.sphereGeometry = new THREE.SphereGeometry(radius, 50, 50)
+    this.visual = new THREE.Mesh(this.sphereGeometry, mesh)
+    this.visual.position.copy(position)
+    this.visual.castShadow = true
+    scene.add(this.visual);
+}
+
+function init() {
+    scene = new THREE.Scene();
+
+    renderer = new THREE.WebGLRenderer({antialias: true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    gltfLoader = new THREE.GLTFLoader();
+    dracoLoader = new THREE.DRACOLoader();
+    gltfLoader.setDRACOLoader(dracoLoader);
+
+    container = document.getElementById("nekonecnyVesmir");
+    container.appendChild(renderer.domElement);
+
+    textureLoader = new THREE.TextureLoader();
+
+    //Init everything
+    initCamera();
+    initInput();
+    initPhysics();
+    addObjects();
+    addLight()
+    addGui();
+}
+
+function addObjects() {
+    // Axis
+    //scene.add(new THREE.AxisHelper(5));
+
+    universe = new SphereWithoutBody("Universe", 40000, new THREE.Vector3(0, 0, 0), physicalMaterial, universeImage, 0.0);
+    sun = new SphereWithoutBody("Sun", 3000, new THREE.Vector3(15000, 0, 0), physicalMaterial, sunImage, 0.0);
+    earth = new Sphere("Earth", earthRadius, new THREE.Vector3(0, 0, 0), physicalMaterial, earthImage, 0.0);
+    moon = new Sphere("Moon", moonRadius, new THREE.Vector3(0, moonDistance * 2, 0), physicalMaterial, moonImage, 0.0);
+
+    //Solar system
+    solarSystem = new THREE.Object3D();
+    //Earth to be below 0,0,0
+    solarSystem.position.y = -earthRadius;
+    solarSystem.add(earth.visual);
+
+    //Moon - trajectory line
+    moonTrajectory = new THREE.EllipseCurve(0, 0, 1500, 1500);
+    moonTrajectoryLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(moonTrajectory.getSpacedPoints(100)), new THREE.LineBasicMaterial({
+        color: "white"
+    }));
+    //Rotate horizontally
+    moonTrajectoryLine.rotation.x = Math.PI * -0.5
+    moonTrajectoryLine.position.y = moonDistance
+    scene.add(moonTrajectoryLine);
+
+    //Create moon as 3D object so we can move around position
+    moonRotation = new THREE.Object3D();
+    moonRotation.add(moon.visual);
+    solarSystem.add(moonRotation);
+
+    //Add solar system to scene
+    scene.add(solarSystem);
+
+    //Load rocket
+    gltfLoader.load("models/aircraft/rocket.glb",
+        function (gltf) {
+            aircraftAsset = gltf.scene;
+            setupRocket(aircraftAsset)
+        }
+    )
+    matchPhysicalObject(earth);
+    matchPhysicalObject(moon);
+
+}
+
+function addLight() {
+    //Sun light
+    sunLight = new THREE.PointLight(0xffffff, 1.2, 0, 2);
+    sunLight.position.set(10000, 0, 0)
+    scene.add(sunLight)
+
+    //Ambient Light
+    ambientLight = new THREE.AmbientLight(0x404040);
+    scene.add(ambientLight);
+}
+
+function setupRocket(aircraftAsset) {
+    aircraftAsset.position.y = -80.0;
+    aircraftAsset.position.x = 3.5;
+    aircraftAsset.scale.set(10, 10, 10);
+
+    const material = new THREE.MeshLambertMaterial({color: 0xFFFFFF, opacity: 0.1, transparent: true})
+
+    aircraft = new Cube("aircraft", 20.0, 40.0, 20.0, new CANNON.Vec3(0, 0, 0).copy(startPos), physicalMaterial, material, aircraftDryMass + 1.0);
+    aircraft.visual.add(aircraftAsset);
+
+    //Bottom engine
+    bottomEngine = new THREE.Mesh(new THREE.ConeGeometry(5, 30, 8), new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.5
+    }));
+    bottomEngine.position.y = -20;
+    bottomEngine.visible = false;
+    aircraft.visual.add(bottomEngine);
+
+    //West engine
+    westEngine = new THREE.Mesh(new THREE.ConeGeometry(2, 10, 8), new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        //transparent: true,
+        //opacity: 0.5
+    }));
+    westEngine.position.x = 10;
+    westEngine.position.y = 15;
+    westEngine.rotation.z = Math.PI / 2;
+    westEngine.visible = true;
+    aircraft.visual.add(westEngine);
+
+    //East engine
+    eastEngine = new THREE.Mesh(new THREE.ConeGeometry(2, 10, 8), new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        //transparent: true,
+        //opacity: 0.5
+    }));
+    eastEngine.position.x = -10;
+    eastEngine.position.y = 15;
+    eastEngine.rotation.z = -Math.PI / 2;
+    eastEngine.visible = false;
+    aircraft.visual.add(eastEngine);
+
+    //South engine
+    southEngine = new THREE.Mesh(new THREE.ConeGeometry(2, 10, 8), new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        //transparent: true,
+        //opacity: 0.5
+    }));
+    southEngine.rotation.x = Math.PI / 2;
+    southEngine.position.y = 15;
+    southEngine.position.z = -10;
+    southEngine.visible = false;
+    aircraft.visual.add(southEngine);
+
+    //North engine
+    northEngine = new THREE.Mesh(new THREE.ConeGeometry(2, 10, 8), new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        //transparent: true,
+        //opacity: 0.5
+    }));
+    northEngine.rotation.x = -Math.PI / 2;
+    northEngine.position.y = 15;
+    northEngine.position.z = 10
+    northEngine.visible = false;
+    aircraft.visual.add(northEngine);
+
+    arrowHelper = new THREE.ArrowHelper(new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 0, 0), 30.0, 0xffff00);
+    scene.add(arrowHelper);
+
+    aircraft.body.addEventListener("collide", collision);
+
+}
+
+function addGui() {
+    controller = {
+        trajectory: false,
+        arrowHelper: false,
+    }
+
+    let gui = new dat.GUI();
+
+    let g3 = gui.addFolder("Nastavenie");
+    g3.add(controller, 'trajectory').name('Zobraz trajektorie');
+    g3.add(controller, 'arrowHelper').name('Zobraz smer rakety');
+}
+
+function initCamera() {
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 10000000);
+    cameraControls = new THREE.OrbitControls(camera, renderer.domElement);
+    camera.position.set(0, 0, 500)
+
+    scene.add(camera)
+}
+
+function initInput() {
+    keyboard = new THREEx.KeyboardState();
+
+    //Keyboard
+    keyboard.domElement.addEventListener('keydown', function (event) {
+        if (keyboard.eventMatches(event, 'w') || keyboard.eventMatches(event, 'up')) {
+            onUpPress();
+        }
+        if (keyboard.eventMatches(event, 'a') || keyboard.eventMatches(event, 'left')) {
+            onLeftPress();
+        }
+        if (keyboard.eventMatches(event, 's') || keyboard.eventMatches(event, 'down')) {
+            onDownPress();
+        }
+        if (keyboard.eventMatches(event, 'd') || keyboard.eventMatches(event, 'right')) {
+            onRightPress();
+        }
+        if (keyboard.eventMatches(event, 'r')) {
+            onRestartPress();
+        }
+        if (keyboard.eventMatches(event, 'space')) {
+            onThrustPress();
+        }
+    })
+
+    keyboard.domElement.addEventListener('keyup', function (event) {
+        if (keyboard.eventMatches(event, 'w') || keyboard.eventMatches(event, 'up')) {
+            onUpRelease();
+        }
+        if (keyboard.eventMatches(event, 'a') || keyboard.eventMatches(event, 'left')) {
+            onLeftRelease();
+        }
+        if (keyboard.eventMatches(event, 'd') || keyboard.eventMatches(event, 'right')) {
+            onRightRelease();
+        }
+        if (keyboard.eventMatches(event, 's') || keyboard.eventMatches(event, 'down')) {
+            onDownRelease();
+        }
+        if (keyboard.eventMatches(event, 'space')) {
+            onThrustRelease();
+        }
+    })
+}
+
+function initPhysics() {
+    world = new CANNON.World();
+    world.gravity.set(0, 0, 0);
+    world.broadphase = new CANNON.NaiveBroadphase();
+    world.solver.iterations = 10;
+
+    physicalMaterial = new CANNON.Material({
+        name: 'physicalMaterial',
+        friction: 0.9,
+        restitution: 0.3
+    });
+}
+
+function render() {
+    requestAnimationFrame(render);
+    update();
+
+    renderer.clear();
+    renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+    renderer.render(scene, camera);
+}
+
+function update() {
+    deltaTime = (Date.now() - prevDate) / 1000;
+    gameTime += deltaTime;
+
+    //Solárny systém
+    updateSolarSystem()
+
+    //Fyzika
+    world.step(deltaTime);
+    for (let i = 0; i < physicalObjects.length; i++) {
+        if (physicalObjects[i].enabled) {
+            updateGravity(physicalObjects[i]);
+            matchPhysicalObject(physicalObjects[i]);
+        }
+    }
+
+    // Vznasadlo
+    if (aircraft != null)
+        updateAircraft();
+
+    // Nastavenia
+    updateController(controller);
+
+    // Kamera
+    updateCamera();
+
+    prevDate = Date.now();
+}
+
+function updateSolarSystem() {
+    let rotationOnTrajectoryTime = (clock.getElapsedTime() * moonRevolveSpeed) % 1;
+    let v = new THREE.Vector3();
+    moonTrajectory.getPointAt(rotationOnTrajectoryTime, v)
+    moonRotation.position.x = v.x;
+    moonRotation.position.z = v.y;
+    moon.visual.rotation.y -= planetVisualRotationSpeed * deltaTime;
+    earth.visual.rotation.y -= planetVisualRotationSpeed * deltaTime;
+}
+
+function updateAircraft() {
+    aircraft.body.angularVelocity.y = 0;
+
+    //Allow only MaxAircraftSpeed - Aby sa rýchlosť v závislosti dĺžky vektora nezvyšovala konštantne ale bola limitovana
+    limitAircraftSpeed()
+
+    // ArrowHelper - Smer rakety
+    let dir = new CANNON.Vec3(0, 0, 0);
+    dir.copy(aircraft.body.velocity);
+
+    let length = 10.0 + dir.length();
+
+    dir.normalize();
+    arrowHelper.setDirection(dir);
+    arrowHelper.setLength(length);
+    arrowHelper.position.copy(aircraft.visual.position);
+
+    //Motory rakety
+    if (wantsRotateN && !rotatedN) {
+        northEngine.visible = true;
+        rotate(-torqueIntensity, 0);
+        rotatedN = true;
+    } else if (!wantsRotateE || rotatedE) {
+        northEngine.visible = false;
+    }
+
+    if (wantsRotateS && !rotatedS) {
+        southEngine.visible = true;
+        rotate(torqueIntensity, 0);
+        rotatedS = true;
+    } else if (!wantsRotateE || rotatedE) {
+        southEngine.visible = false;
+    }
+
+    if (wantsRotateW && !rotatedW) {
+        westEngine.visible = true;
+        rotate(0, torqueIntensity);
+        rotatedW = true;
+    } else if (!wantsRotateW || rotatedW) {
+        westEngine.visible = false;
+    }
+
+    if (wantsRotateE && !rotatedE) {
+        eastEngine.visible = true;
+        rotate(0, -torqueIntensity);
+        rotatedE = true;
+    } else if (!wantsRotateE || rotatedE) {
+        eastEngine.visible = false;
+    }
+
+    //When flying - držanie medzernika
+    if (thrust) {
+        aircraft.body.applyLocalForce(new CANNON.Vec3(0, 1, 0).scale(thrustIntensity), new CANNON.Vec3(0, 0, 0));
+        bottomEngine.visible = true;
+    } else {
+        bottomEngine.visible = false;
+    }
+
+    aircraft.body.mass = aircraftDryMass;
+
+    updateAircraftDrag()
+}
+
+function limitAircraftSpeed() {
+    if (aircraft.body.velocity.length() > maxAircraftSpeed) {
+        aircraft.body.velocity.normalize();
+        aircraft.body.velocity = aircraft.body.velocity.scale(maxAircraftSpeed);
+    }
+}
+
+function rotate(z, x) {
+    aircraft.body.torque = aircraft.body.torque.vadd(new CANNON.Vec3(0, 0, 1).scale(x));
+    aircraft.body.torque = aircraft.body.torque.vadd(new CANNON.Vec3(1, 0, 0).scale(z));
+}
+
+function updateAircraftDrag() {
+    let distanceToEarth = earth.body.position.vsub(aircraft.body.position).length();
+    let distanceToMoon = moon.body.position.vsub(aircraft.body.position).length();
+
+    if (distanceToEarth < earthRadius + 20.0) aircraft.body.linearDamping = 0.8;
+    else if (distanceToEarth < earthRadius + atmosphereHeight) {
+        let heightLerp = lerp(earthRadius, earthRadius + atmosphereHeight, distanceToEarth);
+        aircraft.body.linearDamping = (1.0 - heightLerp) * airFriction;
+    } else aircraft.body.linearDamping = 0.0;
+
+    if (distanceToMoon < moonRadius + 20.0) aircraft.body.linearDamping = 0.8;
+    else if (distanceToMoon < moonRadius + atmosphereHeight) {
+        let heightLerp = lerp(moonRadius, moonRadius + atmosphereHeight, distanceToMoon);
+        aircraft.body.linearDamping = (1.0 - heightLerp) * airFriction;
+    } else aircraft.body.linearDamping = 0.0;
+}
+
+function updateGravity(physicalObject) {
+    let earthDistance = earth.body.position.vsub(physicalObject.body.position);
+    let moonDistance = moon.body.position.vsub(physicalObject.body.position);
+    let distanceToEarth = earthDistance.length()
+    let distanceToMoon = moonDistance.length()
+
+    let earthGravity = (G * earthMass) / Math.pow(distanceToEarth, 2);
+    if (earthGravity < gravityThreshold) earthGravity = 0.0;
+
+    let moonGravity = (G * moonMass) / Math.pow(distanceToMoon, 2);
+    if (moonGravity < gravityThreshold) moonGravity = 0.0;
+
+    let earthImpluse_a = earthDistance;
+    earthImpluse_a.normalize();
+    let earthImpluse = earthImpluse_a.scale(earthGravity);
+
+    let moonImpluse_a = moonDistance
+    moonImpluse_a.normalize();
+    let moonImpulse = moonImpluse_a.scale(moonGravity);
+
+    let totalImpulse = earthImpluse.vadd(moonImpulse);
+
+    physicalObject.body.velocity = physicalObject.body.velocity.vadd(totalImpulse.scale(deltaTime));
+    physicalObject.gravityLength = totalImpulse.length();
+    physicalObject.gravityDir.copy(totalImpulse);
+    physicalObject.gravityDir.normalize();
+}
+
+function updateCamera() {
+}
+
+function updateController(controller) {
+    if (controller.trajectory)
+        moonTrajectoryLine.visible = true
+    else
+        moonTrajectoryLine.visible = false
+
+    if (aircraft != null && controller.arrowHelper)
+        arrowHelper.visible = true
+    else if (aircraft != null)
+        arrowHelper.visible = false
+}
+
+function matchPhysicalObject(physicalObject) {
+    if (physicalObject.body.mass > 0) {
+        physicalObject.visual.position.copy(physicalObject.body.position);
+        physicalObject.visual.quaternion.copy(physicalObject.body.quaternion);
+    } else {
+        let visualPos = new THREE.Vector3();
+        let visualRot = new THREE.Quaternion();
+        physicalObject.visual.getWorldPosition(visualPos);
+        physicalObject.visual.getWorldQuaternion(visualRot);
+        physicalObject.body.position.copy(visualPos);
+        physicalObject.body.quaternion.copy(visualRot);
+    }
+}
+
+function collision(event) {
+    let relativeVelocity = event.contact.getImpactVelocityAlongNormal();
+    if (Math.abs(relativeVelocity) > 100) {
+        restart();
+    } else if (event.body.physicalObject.name == "moon") {
+        aircraft.body.velocity = new CANNON.Vec3(0, 0, 0);
+        aircraft.body.angularVelocity = new CANNON.Vec3(0, 0, 0);
+        alert("win")
+    }
+}
+
+function lerp(min, max, value) {
+    let l = (value - min) / (max - min);
+    return Math.min(Math.max(l, 0.0), 1.0);
+}
+
+function restart() {
+    aircraft.body.position.copy(startPos);
+    aircraft.body.quaternion = new CANNON.Quaternion();
+
+    aircraft.body.velocity = new CANNON.Vec3(0, 0, 0);
+    aircraft.body.angularVelocity = new CANNON.Vec3(0, 0, 0);
+}
+
+function onUpPress() {
+    wantsRotateN = true;
+}
+
+function onUpRelease() {
+    wantsRotateN = false;
+    rotatedN = false;
+}
+
+function onDownPress() {
+    wantsRotateS = true;
+}
+
+function onDownRelease() {
+    wantsRotateS = false;
+    rotatedS = false;
+}
+
+function onLeftPress() {
+    wantsRotateW = true;
+}
+
+function onLeftRelease() {
+    wantsRotateW = false;
+    rotatedW = false;
+}
+
+function onRightPress() {
+    wantsRotateE = true;
+}
+
+function onRightRelease() {
+    wantsRotateE = false;
+    rotatedE = false;
+}
+
+function onThrustPress() {
+    thrust = true;
+}
+
+function onThrustRelease() {
+    thrust = false;
+}
+
+function onRestartPress() {
+    restart()
+}
