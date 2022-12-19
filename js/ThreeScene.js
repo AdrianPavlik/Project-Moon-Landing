@@ -22,6 +22,9 @@ let clock = new THREE.Clock();
 let prevDate = Date.now();
 let deltatime = 0;
 let gameTime = 0;
+let maxTime = 5.5 * 60; //Default
+let timerInterval;
+let intervalSet = false;
 
 // Camera
 let camera;
@@ -172,8 +175,8 @@ function init() {
     textureLoader = new THREE.TextureLoader();
 
     //Init everything
+    addMenuListeners();
     initCamera();
-    initInput();
     initPhysics();
     addObjects();
     addLight()
@@ -322,6 +325,9 @@ function addGui() {
     let g3 = gui.addFolder("Nastavenie");
     g3.add(controller, 'trajectory').name('Zobraz trajektorie');
     g3.add(controller, 'arrowHelper').name('Zobraz smer rakety');
+
+    //Hide dat gui so only menu is visible
+    dat.GUI.toggleHide()
 }
 
 function initCamera() {
@@ -389,6 +395,55 @@ function initPhysics() {
     });
 }
 
+function addMenuListeners() {
+    //HARD BUTTON
+    document.getElementById("hard").addEventListener("mouseover", (e) => {
+        document.getElementById("hard").innerHTML = "1:30 minute"
+    })
+    document.getElementById("hard").addEventListener("mouseleave", (e) => {
+        document.getElementById("hard").innerHTML = "HARD"
+    })
+    document.getElementById("hard").addEventListener("click", (e) => {
+        maxTime = 1.5 * 60;
+        start()
+    })
+
+
+    //MEDIUM BUTTON
+    document.getElementById("medium").addEventListener("mouseover", (e) => {
+        document.getElementById("medium").innerHTML = "2:30 minutes"
+    })
+    document.getElementById("medium").addEventListener("mouseleave", (e) => {
+        document.getElementById("medium").innerHTML = "MEDIUM"
+    })
+    document.getElementById("medium").addEventListener("click", (e) => {
+        maxTime = 2.5 * 60;
+        start()
+    })
+
+
+    //EASY BUTTON
+    document.getElementById("easy").addEventListener("mouseover", (e) => {
+        document.getElementById("easy").innerHTML = "5:30 minutes"
+    })
+    document.getElementById("easy").addEventListener("mouseleave", (e) => {
+        document.getElementById("easy").innerHTML = "EASY"
+    })
+    document.getElementById("easy").addEventListener("click", (e) => {
+        maxTime = 5.5 * 60;
+        start()
+    })
+}
+
+function start() {
+    initInput();
+    document.getElementById("menuWrap").style.visibility = "hidden";
+    document.getElementById("info").style.visibility = "visible";
+    document.getElementById("timer").style.visibility = "visible";
+    document.getElementById("timerText").innerHTML = maxTime;
+    dat.GUI.toggleHide();
+}
+
 function render() {
     requestAnimationFrame(render);
     update();
@@ -425,6 +480,16 @@ function update() {
     updateCamera();
 
     prevDate = Date.now();
+}
+
+function updateTimer() {
+    maxTime -= 1;
+    document.getElementById("timerText").innerHTML = maxTime
+    if (maxTime <= 0) {
+        clearInterval(timerInterval)
+        alert("You Lost!")
+        location.reload()
+    }
 }
 
 function updateSolarSystem() {
@@ -647,6 +712,9 @@ function onRightRelease() {
 }
 
 function onThrustPress() {
+    if(!intervalSet)
+        timerInterval = setInterval(updateTimer, 1000);
+    intervalSet = true
     thrust = true;
 }
 
