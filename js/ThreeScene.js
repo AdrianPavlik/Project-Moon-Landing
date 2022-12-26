@@ -523,8 +523,8 @@ function updateSolarSystem() {
     let rotationOnTrajectoryTime = (clock.getElapsedTime() * moonRevolveSpeed) % 1;
     let v = new THREE.Vector3();
     moonTrajectory.getPointAt(rotationOnTrajectoryTime, v)
-    //moonRotation.position.x = v.x;
-    //moonRotation.position.z = v.y;
+    moonRotation.position.x = v.x;
+    moonRotation.position.z = v.y;
     moon.visual.rotation.y -= planetVisualRotationSpeed * deltaTime;
     earth.visual.rotation.y -= planetVisualRotationSpeed * deltaTime;
 }
