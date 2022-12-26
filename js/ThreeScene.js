@@ -22,6 +22,10 @@ let clock = new THREE.Clock();
 let prevDate = Date.now();
 let deltatime = 0;
 let gameTime = 0;
+let maxTime = 5.5 * 60; //Default
+let currentTime;
+let timerInterval;
+let intervalSet = false;
 
 // Camera
 let camera;
@@ -29,6 +33,7 @@ let camera;
 // Interaction
 let cameraControls;
 let keyboard;
+let keyboardInited = false;
 let controller;
 
 // Physics
@@ -51,15 +56,17 @@ let airFriction = 0.5;
 
 // Aircraft
 let aircraft, aircraftAsset = new THREE.Object3D();
-let startPos = new CANNON.Vec3(0, 20, 0);
-let thrust, wantsRotateN, wantsRotateS, wantsRotateW, wantsRotateE = false;
-let rotatedN, rotatedS, rotatedW, rotatedE = false;
+let startPos = new CANNON.Vec3(0, 25, 0);
+let thrust, wantsRotateZPos, wantsRotateZNeg, wantsRotateXPos, wantsRotateXNeg, wantsRotateYPos, wantsRotateYNeg = false;
+let rotatedZPos, rotatedZNeg, rotatedXPos, rotatedXNeg, rotatedYPos, rotatedYNeg = false;
 let thrustIntensity = 250.0;
 let torqueIntensity = 2000.0;
 let arrowHelper;
 let aircraftDryMass = 1.0;
 let maxAircraftSpeed = 2000;
-let bottomEngine, westEngine, eastEngine, southEngine, northEngine;
+let bottomEngine
+
+let rotationX = 0,rotationY = 0, rotationZ = 0
 
 //Loaders
 let textureLoader, gltfLoader, dracoLoader;
@@ -172,10 +179,11 @@ function init() {
     textureLoader = new THREE.TextureLoader();
 
     //Init everything
+    addMenuListeners();
     initCamera();
-    initInput();
     initPhysics();
     addObjects();
+    initCamera();
     addLight()
     addGui();
 }
@@ -232,7 +240,7 @@ function addLight() {
     scene.add(sunLight)
 
     //Ambient Light
-    ambientLight = new THREE.AmbientLight(0x404040);
+    ambientLight = new THREE.AmbientLight(0x808080);
     scene.add(ambientLight);
 }
 
@@ -256,54 +264,6 @@ function setupRocket(aircraftAsset) {
     bottomEngine.visible = false;
     aircraft.visual.add(bottomEngine);
 
-    //West engine
-    westEngine = new THREE.Mesh(new THREE.ConeGeometry(2, 10, 8), new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        //transparent: true,
-        //opacity: 0.5
-    }));
-    westEngine.position.x = 10;
-    westEngine.position.y = 15;
-    westEngine.rotation.z = Math.PI / 2;
-    westEngine.visible = true;
-    aircraft.visual.add(westEngine);
-
-    //East engine
-    eastEngine = new THREE.Mesh(new THREE.ConeGeometry(2, 10, 8), new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        //transparent: true,
-        //opacity: 0.5
-    }));
-    eastEngine.position.x = -10;
-    eastEngine.position.y = 15;
-    eastEngine.rotation.z = -Math.PI / 2;
-    eastEngine.visible = false;
-    aircraft.visual.add(eastEngine);
-
-    //South engine
-    southEngine = new THREE.Mesh(new THREE.ConeGeometry(2, 10, 8), new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        //transparent: true,
-        //opacity: 0.5
-    }));
-    southEngine.rotation.x = Math.PI / 2;
-    southEngine.position.y = 15;
-    southEngine.position.z = -10;
-    southEngine.visible = false;
-    aircraft.visual.add(southEngine);
-
-    //North engine
-    northEngine = new THREE.Mesh(new THREE.ConeGeometry(2, 10, 8), new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        //transparent: true,
-        //opacity: 0.5
-    }));
-    northEngine.rotation.x = -Math.PI / 2;
-    northEngine.position.y = 15;
-    northEngine.position.z = 10
-    northEngine.visible = false;
-    aircraft.visual.add(northEngine);
-
     arrowHelper = new THREE.ArrowHelper(new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 0, 0), 30.0, 0xffff00);
     scene.add(arrowHelper);
 
@@ -322,6 +282,9 @@ function addGui() {
     let g3 = gui.addFolder("Nastavenie");
     g3.add(controller, 'trajectory').name('Zobraz trajektorie');
     g3.add(controller, 'arrowHelper').name('Zobraz smer rakety');
+
+    //Hide dat gui so only menu is visible
+    dat.GUI.toggleHide()
 }
 
 function initCamera() {
@@ -332,22 +295,35 @@ function initCamera() {
     scene.add(camera)
 }
 
+
 function initInput() {
+    //Don't init twice
+    if(keyboardInited)
+        return
+    else
+        keyboardInited = true
+
     keyboard = new THREEx.KeyboardState();
 
     //Keyboard
     keyboard.domElement.addEventListener('keydown', function (event) {
         if (keyboard.eventMatches(event, 'w') || keyboard.eventMatches(event, 'up')) {
-            onUpPress();
+            onUpPress()
         }
         if (keyboard.eventMatches(event, 'a') || keyboard.eventMatches(event, 'left')) {
             onLeftPress();
         }
         if (keyboard.eventMatches(event, 's') || keyboard.eventMatches(event, 'down')) {
-            onDownPress();
+            onDownPress()
         }
         if (keyboard.eventMatches(event, 'd') || keyboard.eventMatches(event, 'right')) {
             onRightPress();
+        }
+        if (keyboard.eventMatches(event, 'q')) {
+            onQPress()
+        }
+        if (keyboard.eventMatches(event, 'e')) {
+            onEPress();
         }
         if (keyboard.eventMatches(event, 'r')) {
             onRestartPress();
@@ -370,6 +346,12 @@ function initInput() {
         if (keyboard.eventMatches(event, 's') || keyboard.eventMatches(event, 'down')) {
             onDownRelease();
         }
+        if (keyboard.eventMatches(event, 'q')) {
+            onQRelease()
+        }
+        if (keyboard.eventMatches(event, 'e')) {
+            onERelease();
+        }
         if (keyboard.eventMatches(event, 'space')) {
             onThrustRelease();
         }
@@ -387,6 +369,64 @@ function initPhysics() {
         friction: 0.9,
         restitution: 0.3
     });
+}
+
+function addMenuListeners() {
+    //HARD BUTTON
+    document.getElementById("hard").addEventListener("mouseover", (e) => {
+        document.getElementById("hard").innerHTML = "1:30 minute"
+    })
+    document.getElementById("hard").addEventListener("mouseleave", (e) => {
+        document.getElementById("hard").innerHTML = "HARD"
+    })
+    document.getElementById("hard").addEventListener("click", (e) => {
+        maxTime = 1.5 * 60;
+        start()
+    })
+
+
+    //MEDIUM BUTTON
+    document.getElementById("medium").addEventListener("mouseover", (e) => {
+        document.getElementById("medium").innerHTML = "2:30 minutes"
+    })
+    document.getElementById("medium").addEventListener("mouseleave", (e) => {
+        document.getElementById("medium").innerHTML = "MEDIUM"
+    })
+    document.getElementById("medium").addEventListener("click", (e) => {
+        maxTime = 2.5 * 60;
+        start()
+    })
+
+
+    //EASY BUTTON
+    document.getElementById("easy").addEventListener("mouseover", (e) => {
+        document.getElementById("easy").innerHTML = "5:30 minutes"
+    })
+    document.getElementById("easy").addEventListener("mouseleave", (e) => {
+        document.getElementById("easy").innerHTML = "EASY"
+    })
+    document.getElementById("easy").addEventListener("click", (e) => {
+        maxTime = 5.5 * 60;
+        start()
+    })
+}
+
+function addFinalListeners(){
+    document.getElementById("finalButton").addEventListener("click", (e) => {
+        document.getElementById("menuWrap").style.visibility = "visible";
+        document.getElementById("final").style.visibility = "hidden";
+        restart();
+    })
+}
+
+function start() {
+    currentTime = maxTime;
+    initInput();
+    document.getElementById("menuWrap").style.visibility = "hidden";
+    document.getElementById("info").style.visibility = "visible";
+    document.getElementById("timer").style.visibility = "visible";
+    document.getElementById("timerText").innerHTML = maxTime;
+    dat.GUI.toggleHide();
 }
 
 function render() {
@@ -427,6 +467,25 @@ function update() {
     prevDate = Date.now();
 }
 
+function updateTimer() {
+    currentTime -= 1;
+    document.getElementById("timerText").innerHTML = currentTime
+    if (currentTime <= 0) {
+        clearInterval(timerInterval)
+        lost();
+    }
+}
+
+function lost(){
+    restart()
+    intervalSet = false
+    document.getElementById("info").style.visibility = "hidden";
+    document.getElementById("timer").style.visibility = "hidden";
+    document.getElementById("final").style.visibility = "visible";
+    document.getElementById("finalText").innerHTML = "You lost!";
+    dat.GUI.toggleHide();
+}
+
 function updateSolarSystem() {
     let rotationOnTrajectoryTime = (clock.getElapsedTime() * moonRevolveSpeed) % 1;
     let v = new THREE.Vector3();
@@ -435,6 +494,28 @@ function updateSolarSystem() {
     moonRotation.position.z = v.y;
     moon.visual.rotation.y -= planetVisualRotationSpeed * deltaTime;
     earth.visual.rotation.y -= planetVisualRotationSpeed * deltaTime;
+}
+
+function rotateAircraft(axis, direction, rotation) {
+    aircraft.body.angularVelocity = new CANNON.Vec3(0,0,0)
+
+    let angle = Math.PI / 200
+    
+    if (direction === "-") angle *= -1
+    
+    rotation += angle
+
+    // creating new rotation quaternion and multiplying with current to get new quaternion of result rotation
+    let factorQuaternion = new CANNON.Quaternion()
+    let newQuaternion = new CANNON.Quaternion()
+    newQuaternion.copy(aircraft.body.quaternion)
+
+    factorQuaternion.setFromAxisAngle(axis, angle)
+    newQuaternion.mult(factorQuaternion, newQuaternion)
+
+    aircraft.body.quaternion.copy(newQuaternion)
+
+    return rotation
 }
 
 function updateAircraft() {
@@ -455,36 +536,28 @@ function updateAircraft() {
     arrowHelper.position.copy(aircraft.visual.position);
 
     //Motory rakety
-    if (wantsRotateN && !rotatedN) {
-        northEngine.visible = true;
-        rotate(-torqueIntensity, 0);
-        rotatedN = true;
-    } else if (!wantsRotateE || rotatedE) {
-        northEngine.visible = false;
+    if (wantsRotateZPos && !rotatedZPos) {
+        rotationZ = rotateAircraft(new CANNON.Vec3(0,0,1), "+", rotationZ)
     }
 
-    if (wantsRotateS && !rotatedS) {
-        southEngine.visible = true;
-        rotate(torqueIntensity, 0);
-        rotatedS = true;
-    } else if (!wantsRotateE || rotatedE) {
-        southEngine.visible = false;
+    if (wantsRotateZNeg && !rotatedZNeg) {
+        rotationZ = rotateAircraft(new CANNON.Vec3(0,0,1), "-", rotationZ)
     }
 
-    if (wantsRotateW && !rotatedW) {
-        westEngine.visible = true;
-        rotate(0, torqueIntensity);
-        rotatedW = true;
-    } else if (!wantsRotateW || rotatedW) {
-        westEngine.visible = false;
+    if (wantsRotateXPos && !rotatedXPos) {
+        rotationX = rotateAircraft(new CANNON.Vec3(1,0,0), "+", rotationX)
     }
 
-    if (wantsRotateE && !rotatedE) {
-        eastEngine.visible = true;
-        rotate(0, -torqueIntensity);
-        rotatedE = true;
-    } else if (!wantsRotateE || rotatedE) {
-        eastEngine.visible = false;
+    if (wantsRotateXNeg && !rotatedXNeg) {
+        rotationX = rotateAircraft(new CANNON.Vec3(1,0,0), "-", rotationX)
+    }
+
+    if (wantsRotateYPos && !rotatedYPos) {
+        rotationY = rotateAircraft(new CANNON.Vec3(0,1,0), "+", rotationY)
+    }
+
+    if (wantsRotateYNeg && !rotatedYNeg) {
+        rotationY = rotateAircraft(new CANNON.Vec3(0,1,0), "-", rotationY)
     }
 
     //When flying - držanie medzernika
@@ -558,6 +631,7 @@ function updateGravity(physicalObject) {
 }
 
 function updateCamera() {
+    // camera.lookAt(aircraft.position)
 }
 
 function updateController(controller) {
@@ -587,14 +661,22 @@ function matchPhysicalObject(physicalObject) {
 }
 
 function collision(event) {
-    let relativeVelocity = event.contact.getImpactVelocityAlongNormal();
-    if (Math.abs(relativeVelocity) > 100) {
-        restart();
-    } else if (event.body.physicalObject.name == "moon") {
+    if (event.body.physicalObject.name == "Moon") {
         aircraft.body.velocity = new CANNON.Vec3(0, 0, 0);
         aircraft.body.angularVelocity = new CANNON.Vec3(0, 0, 0);
-        alert("win")
+        if(intervalSet)
+            win()
     }
+}
+
+function win(){
+    clearInterval(timerInterval)
+    intervalSet = false
+    document.getElementById("info").style.visibility = "hidden";
+    document.getElementById("timer").style.visibility = "hidden";
+    document.getElementById("final").style.visibility = "visible";
+    document.getElementById("finalText").innerHTML = "You won!";
+    dat.GUI.toggleHide();
 }
 
 function lerp(min, max, value) {
@@ -611,42 +693,63 @@ function restart() {
 }
 
 function onUpPress() {
-    wantsRotateN = true;
+    wantsRotateXNeg = true;
 }
 
 function onUpRelease() {
-    wantsRotateN = false;
-    rotatedN = false;
+    wantsRotateXNeg = false;
+    rotatedXNeg = false;
 }
 
 function onDownPress() {
-    wantsRotateS = true;
+    wantsRotateXPos = true;
 }
 
 function onDownRelease() {
-    wantsRotateS = false;
-    rotatedS = false;
+    wantsRotateXPos = false;
+    rotatedXPos = false;
 }
 
 function onLeftPress() {
-    wantsRotateW = true;
+    wantsRotateZPos = true;
 }
 
 function onLeftRelease() {
-    wantsRotateW = false;
-    rotatedW = false;
+    wantsRotateZPos = false;
+    rotatedZPos = false;
 }
 
 function onRightPress() {
-    wantsRotateE = true;
+    wantsRotateZNeg = true;
 }
 
 function onRightRelease() {
-    wantsRotateE = false;
-    rotatedE = false;
+    wantsRotateZNeg = false;
+    rotatedZNeg = false;
+}
+
+function onQPress() {
+    wantsRotateYNeg = true;
+}
+
+function onQRelease() {
+    wantsRotateYNeg = false;
+    rotatedYNeg = false;
+}
+
+function onEPress() {
+    wantsRotateYPos = true;
+}
+
+function onERelease() {
+    wantsRotateYPos = false;
+    rotatedYPos = false;
 }
 
 function onThrustPress() {
+    if(!intervalSet)
+        timerInterval = setInterval(updateTimer, 1000);
+    intervalSet = true
     thrust = true;
 }
 
