@@ -23,6 +23,7 @@ let prevDate = Date.now();
 let deltatime = 0;
 let gameTime = 0;
 let maxTime = 5.5 * 60; //Default
+let currentTime;
 let timerInterval;
 let intervalSet = false;
 
@@ -32,6 +33,7 @@ let camera;
 // Interaction
 let cameraControls;
 let keyboard;
+let keyboardInited = false;
 let controller;
 
 // Physics
@@ -178,6 +180,7 @@ function init() {
 
     //Init everything
     addMenuListeners();
+    initCamera();
     initPhysics();
     addObjects();
     initCamera();
@@ -294,6 +297,12 @@ function initCamera() {
 
 
 function initInput() {
+    //Don't init twice
+    if(keyboardInited)
+        return
+    else
+        keyboardInited = true
+
     keyboard = new THREEx.KeyboardState();
 
     //Keyboard
@@ -402,7 +411,16 @@ function addMenuListeners() {
     })
 }
 
+function addFinalListeners(){
+    document.getElementById("finalButton").addEventListener("click", (e) => {
+        document.getElementById("menuWrap").style.visibility = "visible";
+        document.getElementById("final").style.visibility = "hidden";
+        restart();
+    })
+}
+
 function start() {
+    currentTime = maxTime;
     initInput();
     document.getElementById("menuWrap").style.visibility = "hidden";
     document.getElementById("info").style.visibility = "visible";
@@ -450,13 +468,22 @@ function update() {
 }
 
 function updateTimer() {
-    maxTime -= 1;
-    document.getElementById("timerText").innerHTML = maxTime
-    if (maxTime <= 0) {
+    currentTime -= 1;
+    document.getElementById("timerText").innerHTML = currentTime
+    if (currentTime <= 0) {
         clearInterval(timerInterval)
-        alert("You Lost!")
-        location.reload()
+        lost();
     }
+}
+
+function lost(){
+    restart()
+    intervalSet = false
+    document.getElementById("info").style.visibility = "hidden";
+    document.getElementById("timer").style.visibility = "hidden";
+    document.getElementById("final").style.visibility = "visible";
+    document.getElementById("finalText").innerHTML = "You lost!";
+    dat.GUI.toggleHide();
 }
 
 function updateSolarSystem() {
@@ -634,14 +661,22 @@ function matchPhysicalObject(physicalObject) {
 }
 
 function collision(event) {
-    let relativeVelocity = event.contact.getImpactVelocityAlongNormal();
-    if (Math.abs(relativeVelocity) > 100) {
-        restart();
-    } else if (event.body.physicalObject.name == "moon") {
+    if (event.body.physicalObject.name == "Moon") {
         aircraft.body.velocity = new CANNON.Vec3(0, 0, 0);
         aircraft.body.angularVelocity = new CANNON.Vec3(0, 0, 0);
-        alert("win")
+        if(intervalSet)
+            win()
     }
+}
+
+function win(){
+    clearInterval(timerInterval)
+    intervalSet = false
+    document.getElementById("info").style.visibility = "hidden";
+    document.getElementById("timer").style.visibility = "hidden";
+    document.getElementById("final").style.visibility = "visible";
+    document.getElementById("finalText").innerHTML = "You won!";
+    dat.GUI.toggleHide();
 }
 
 function lerp(min, max, value) {
