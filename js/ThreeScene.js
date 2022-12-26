@@ -54,7 +54,7 @@ let airFriction = 0.5;
 
 // Aircraft
 let aircraft, aircraftAsset = new THREE.Object3D();
-let startPos = new CANNON.Vec3(0, 20, 0);
+let startPos = new CANNON.Vec3(0, 25, 0);
 let thrust, wantsRotateN, wantsRotateS, wantsRotateW, wantsRotateE = false;
 let rotatedN, rotatedS, rotatedW, rotatedE = false;
 let thrustIntensity = 250.0;
@@ -63,6 +63,8 @@ let arrowHelper;
 let aircraftDryMass = 1.0;
 let maxAircraftSpeed = 2000;
 let bottomEngine, westEngine, eastEngine, southEngine, northEngine;
+
+let rotationX = 0,rotationY = 0, rotationZ = 0
 
 //Loaders
 let textureLoader, gltfLoader, dracoLoader;
@@ -235,7 +237,7 @@ function addLight() {
     scene.add(sunLight)
 
     //Ambient Light
-    ambientLight = new THREE.AmbientLight(0x404040);
+    ambientLight = new THREE.AmbientLight(0x606060);
     scene.add(ambientLight);
 }
 
@@ -265,11 +267,11 @@ function setupRocket(aircraftAsset) {
         //transparent: true,
         //opacity: 0.5
     }));
-    westEngine.position.x = 10;
-    westEngine.position.y = 15;
-    westEngine.rotation.z = Math.PI / 2;
-    westEngine.visible = true;
-    aircraft.visual.add(westEngine);
+    // westEngine.position.x = 10;
+    // westEngine.position.y = 15;
+    // westEngine.rotation.z = Math.PI / 2;
+    // westEngine.visible = true;
+    // aircraft.visual.add(westEngine);
 
     //East engine
     eastEngine = new THREE.Mesh(new THREE.ConeGeometry(2, 10, 8), new THREE.MeshBasicMaterial({
@@ -277,11 +279,11 @@ function setupRocket(aircraftAsset) {
         //transparent: true,
         //opacity: 0.5
     }));
-    eastEngine.position.x = -10;
-    eastEngine.position.y = 15;
-    eastEngine.rotation.z = -Math.PI / 2;
-    eastEngine.visible = false;
-    aircraft.visual.add(eastEngine);
+    // eastEngine.position.x = -10;
+    // eastEngine.position.y = 15;
+    // eastEngine.rotation.z = -Math.PI / 2;
+    // eastEngine.visible = false;
+    // aircraft.visual.add(eastEngine);
 
     //South engine
     southEngine = new THREE.Mesh(new THREE.ConeGeometry(2, 10, 8), new THREE.MeshBasicMaterial({
@@ -289,11 +291,11 @@ function setupRocket(aircraftAsset) {
         //transparent: true,
         //opacity: 0.5
     }));
-    southEngine.rotation.x = Math.PI / 2;
-    southEngine.position.y = 15;
-    southEngine.position.z = -10;
-    southEngine.visible = false;
-    aircraft.visual.add(southEngine);
+    // southEngine.rotation.x = Math.PI / 2;
+    // southEngine.position.y = 15;
+    // southEngine.position.z = -10;
+    // southEngine.visible = false;
+    // aircraft.visual.add(southEngine);
 
     //North engine
     northEngine = new THREE.Mesh(new THREE.ConeGeometry(2, 10, 8), new THREE.MeshBasicMaterial({
@@ -301,11 +303,11 @@ function setupRocket(aircraftAsset) {
         //transparent: true,
         //opacity: 0.5
     }));
-    northEngine.rotation.x = -Math.PI / 2;
-    northEngine.position.y = 15;
-    northEngine.position.z = 10
-    northEngine.visible = false;
-    aircraft.visual.add(northEngine);
+    // northEngine.rotation.x = -Math.PI / 2;
+    // northEngine.position.y = 15;
+    // northEngine.position.z = 10
+    // northEngine.visible = false;
+    // aircraft.visual.add(northEngine);
 
     arrowHelper = new THREE.ArrowHelper(new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 0, 0), 30.0, 0xffff00);
     scene.add(arrowHelper);
@@ -338,19 +340,20 @@ function initCamera() {
     scene.add(camera)
 }
 
+
 function initInput() {
     keyboard = new THREEx.KeyboardState();
 
     //Keyboard
     keyboard.domElement.addEventListener('keydown', function (event) {
         if (keyboard.eventMatches(event, 'w') || keyboard.eventMatches(event, 'up')) {
-            onUpPress();
+            onUpPress()
         }
         if (keyboard.eventMatches(event, 'a') || keyboard.eventMatches(event, 'left')) {
             onLeftPress();
         }
         if (keyboard.eventMatches(event, 's') || keyboard.eventMatches(event, 'down')) {
-            onDownPress();
+            onDownPress()
         }
         if (keyboard.eventMatches(event, 'd') || keyboard.eventMatches(event, 'right')) {
             onRightPress();
@@ -502,6 +505,36 @@ function updateSolarSystem() {
     earth.visual.rotation.y -= planetVisualRotationSpeed * deltaTime;
 }
 
+function rotateAircraft(axis, direction, rotation) {
+    aircraft.body.angularVelocity = new CANNON.Vec3(0,0,0)
+
+    let angle = Math.PI / 180
+    
+    if (direction === "-") angle *= -1
+    
+    rotation += angle
+
+    aircraft.body.quaternion.setFromAxisAngle(axis, rotation)
+
+    return rotation
+
+    // let newRotation = 0
+    // let factorQuaternion = new CANNON.Quaternion()
+    // let newQuaternion = new CANNON.Quaternion()
+
+    // let currentQuaternion = aircraft.body.quaternion
+    // let currentRotation = currentQuaternion.toAxisAngle()
+    // currentRotation = currentRotation[1]
+    // if (direction === "+") {
+    //     newRotation = currentRotation + Math.PI/ 100
+    // } else if (direction === "-") {
+    //     newRotation = currentRotation - Math.PI / 100
+    // }
+
+    // factorQuaternion.setFromAxisAngle(axis, newRotation)
+    // aircraft.body.quaternion = newQuaternion.mult(factorQuaternion, aircraft.body.quaternion)
+}
+
 function updateAircraft() {
     aircraft.body.angularVelocity.y = 0;
 
@@ -521,35 +554,19 @@ function updateAircraft() {
 
     //Motory rakety
     if (wantsRotateN && !rotatedN) {
-        northEngine.visible = true;
-        rotate(-torqueIntensity, 0);
-        rotatedN = true;
-    } else if (!wantsRotateE || rotatedE) {
-        northEngine.visible = false;
+        rotationZ = rotateAircraft(new CANNON.Vec3(0,0,1), "+", rotationZ)
     }
 
     if (wantsRotateS && !rotatedS) {
-        southEngine.visible = true;
-        rotate(torqueIntensity, 0);
-        rotatedS = true;
-    } else if (!wantsRotateE || rotatedE) {
-        southEngine.visible = false;
+        rotationZ = rotateAircraft(new CANNON.Vec3(0,0,1), "-", rotationZ)
     }
 
     if (wantsRotateW && !rotatedW) {
-        westEngine.visible = true;
-        rotate(0, torqueIntensity);
-        rotatedW = true;
-    } else if (!wantsRotateW || rotatedW) {
-        westEngine.visible = false;
+        rotationX = rotateAircraft(new CANNON.Vec3(1,0,0), "+", rotationX)
     }
 
     if (wantsRotateE && !rotatedE) {
-        eastEngine.visible = true;
-        rotate(0, -torqueIntensity);
-        rotatedE = true;
-    } else if (!wantsRotateE || rotatedE) {
-        eastEngine.visible = false;
+        rotationX = rotateAircraft(new CANNON.Vec3(1,0,0), "-", rotationX)
     }
 
     //When flying - držanie medzernika
