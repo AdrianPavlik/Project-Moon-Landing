@@ -33,6 +33,11 @@ let cameraDistance = 1200
 let maxCameraDistance = 6000
 let minCameraDistance = 1200
 let cameraZoomSpeed = 200;
+let cameraX = 0
+let cameraY = 0
+// let angleX = 0;
+// let angleY = 0;
+let controls;
 
 // Interaction
 let cameraControls;
@@ -65,7 +70,6 @@ let thrust, wantsRotateZPos, wantsRotateZNeg, wantsRotateXPos, wantsRotateXNeg, 
     wantsRotateYNeg = false;
 let rotatedZPos, rotatedZNeg, rotatedXPos, rotatedXNeg, rotatedYPos, rotatedYNeg = false;
 let thrustIntensity = 250.0;
-let torqueIntensity = 2000.0;
 let arrowHelper;
 let aircraftDryMass = 1.0;
 let maxAircraftSpeed = 2000;
@@ -188,9 +192,16 @@ function init() {
     addFinalListeners()
     initPhysics();
     addObjects();
-    initCamera();
     addLight()
+    initCamera();
+    initControls();
     addGui();
+}
+
+function initControls() {
+    cameraControls = new THREE.OrbitControls(camera, renderer.domElement)
+    cameraControls.enablePan = false
+    cameraControls.update()
 }
 
 function addObjects() {
@@ -231,6 +242,7 @@ function addObjects() {
         function (gltf) {
             aircraftAsset = gltf.scene;
             setupRocket(aircraftAsset)
+
         }
     )
     matchPhysicalObject(earth);
@@ -269,6 +281,8 @@ function setupRocket(aircraftAsset) {
     bottomEngine.visible = false;
     aircraft.visual.add(bottomEngine);
 
+    aircraft.visual.add(camera)
+
     arrowHelper = new THREE.ArrowHelper(new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 0, 0), 30.0, 0xffff00);
     scene.add(arrowHelper);
 
@@ -294,7 +308,7 @@ function addGui() {
 
 function initCamera() {
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 10000000);
-    camera.position.set(0, 0, cameraDistance)
+    camera.position.set(cameraX, cameraY, cameraDistance)
 
 }
 
@@ -306,7 +320,10 @@ function initInput() {
         inputInited = true
 
     keyboard = new THREEx.KeyboardState();
+
     document.addEventListener('wheel', (e) => onMouseWheel(e), true);
+    
+    document.addEventListener('mousemove', (e) => onMouseMove(e), true);
 
     //Keyboard
     keyboard.domElement.addEventListener('keydown', function (event) {
@@ -464,6 +481,7 @@ function update() {
     // Nastavenia
     updateController(controller);
 
+
     // Kamera
     updateCamera();
 
@@ -583,11 +601,6 @@ function limitAircraftSpeed() {
     }
 }
 
-function rotate(z, x) {
-    aircraft.body.torque = aircraft.body.torque.vadd(new CANNON.Vec3(0, 0, 1).scale(x));
-    aircraft.body.torque = aircraft.body.torque.vadd(new CANNON.Vec3(1, 0, 0).scale(z));
-}
-
 function updateAircraftDrag() {
     let distanceToEarth = earth.body.position.vsub(aircraft.body.position).length();
     let distanceToMoon = moon.body.position.vsub(aircraft.body.position).length();
@@ -633,20 +646,44 @@ function updateGravity(physicalObject) {
     physicalObject.gravityDir.normalize();
 }
 
+const degrees_to_radians = deg => (deg * Math.PI) / 180.0;
+
 function updateCamera() {
     if (camera && aircraft) {
+        // cameraControls.target.copy( aircraft.body.position );
+        // camera.position = aircraft.body.position
+        cameraControls.update()
         //let distanceFromCenter = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z).sub(new THREE.Vector3(0, 0, 0)).length()
-        camera.position.z = cameraDistance
-        camera.position.y = aircraft.body.position.y
+        // let oldDistance = getDistance(aircraft.body.position.x, aircraft.body.position.y, aircraft.body.position.z, camera.position.x, camera.position.y, camera.position.z)
+        
+//         console.log(angleX)
+// e
+//         let newX = cameraDistance * Math.cos(degrees_to_radians(angleY)) + aircraft.body.position.x
+//         let newY = cameraDistance * Math.cos(degrees_to_radians(angleX)) + aircraft.body.position.y
+//         let newZ = cameraDistance * Math.sin(degrees_to_radians(angleY)) + aircraft.body.position.z
+
+
+//         camera.position.x = newX
+//         camera.position.y = newY
+//         camera.position.z = newZ
+
+
+        // camera.position.z = aircraft.body.position.z + cameraDistance
+
+        // camera.lookAt(aircraft.body.position.x, aircraft.body.position.y, aircraft.body.position.z)
+
+
+        
     }
 
 }
 
+function getDistance(x1, y1, z1, x2, y2, z2) {
+    return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2)
+}
+
 function updateController(controller) {
-    if (controller.trajectory)
-        moonTrajectoryLine.visible = true
-    else
-        moonTrajectoryLine.visible = false
+    moonTrajectoryLine.visible = controller.trajectory;
 
     if (aircraft != null && controller.arrowHelper)
         arrowHelper.visible = true
@@ -669,7 +706,7 @@ function matchPhysicalObject(physicalObject) {
 }
 
 function collision(event) {
-    if (event.body.physicalObject.name == "Moon") {
+    if (event.body.physicalObject.name === "Moon") {
         aircraft.body.velocity = new CANNON.Vec3(0, 0, 0);
         aircraft.body.angularVelocity = new CANNON.Vec3(0, 0, 0);
         if (intervalSet)
@@ -705,6 +742,27 @@ function onMouseWheel(e) {
         cameraDistance += cameraZoomSpeed;
     else if (e.deltaY < 0 && cameraDistance > minCameraDistance)
         cameraDistance -= cameraZoomSpeed;
+}
+
+function onMouseMove(event) {
+    updateCamera()
+    // cameraX += e.movementX
+    // cameraY += e.movementY
+    // if (e.movementX < 0) {
+    //     angleX -= 1
+    //     // angleX %= 360
+    // }
+    // else {
+    //     angleX += 1
+    //     // angleX %= 360
+    // }
+    // if (e.movementY < 0) {
+    //     angleY -= 1
+    //     // angleY %= 360
+    // }
+    // else {
+    //     angleY += 1
+    // }
 }
 
 function onUpPress() {
