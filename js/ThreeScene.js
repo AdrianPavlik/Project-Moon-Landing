@@ -201,6 +201,8 @@ function init() {
 function initControls() {
     cameraControls = new THREE.OrbitControls(camera, renderer.domElement)
     cameraControls.enablePan = false
+    cameraControls.enableDamping = true
+    cameraControls.dampingFactor = 1
     cameraControls.update()
 }
 
@@ -323,7 +325,7 @@ function initInput() {
 
     document.addEventListener('wheel', (e) => onMouseWheel(e), true);
     
-    document.addEventListener('mousemove', (e) => onMouseMove(e), true);
+    // document.addEventListener('mousemove', (e) => onMouseMove(e), true);
 
     //Keyboard
     keyboard.domElement.addEventListener('keydown', function (event) {
@@ -481,9 +483,10 @@ function update() {
     // Nastavenia
     updateController(controller);
 
+    cameraControls.update()
 
     // Kamera
-    updateCamera();
+    // updateCamera();
 
     prevDate = Date.now();
 }
@@ -646,38 +649,6 @@ function updateGravity(physicalObject) {
     physicalObject.gravityDir.normalize();
 }
 
-const degrees_to_radians = deg => (deg * Math.PI) / 180.0;
-
-function updateCamera() {
-    if (camera && aircraft) {
-        // cameraControls.target.copy( aircraft.body.position );
-        // camera.position = aircraft.body.position
-        cameraControls.update()
-        //let distanceFromCenter = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z).sub(new THREE.Vector3(0, 0, 0)).length()
-        // let oldDistance = getDistance(aircraft.body.position.x, aircraft.body.position.y, aircraft.body.position.z, camera.position.x, camera.position.y, camera.position.z)
-        
-//         console.log(angleX)
-// e
-//         let newX = cameraDistance * Math.cos(degrees_to_radians(angleY)) + aircraft.body.position.x
-//         let newY = cameraDistance * Math.cos(degrees_to_radians(angleX)) + aircraft.body.position.y
-//         let newZ = cameraDistance * Math.sin(degrees_to_radians(angleY)) + aircraft.body.position.z
-
-
-//         camera.position.x = newX
-//         camera.position.y = newY
-//         camera.position.z = newZ
-
-
-        // camera.position.z = aircraft.body.position.z + cameraDistance
-
-        // camera.lookAt(aircraft.body.position.x, aircraft.body.position.y, aircraft.body.position.z)
-
-
-        
-    }
-
-}
-
 function getDistance(x1, y1, z1, x2, y2, z2) {
     return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2)
 }
@@ -742,27 +713,6 @@ function onMouseWheel(e) {
         cameraDistance += cameraZoomSpeed;
     else if (e.deltaY < 0 && cameraDistance > minCameraDistance)
         cameraDistance -= cameraZoomSpeed;
-}
-
-function onMouseMove(event) {
-    updateCamera()
-    // cameraX += e.movementX
-    // cameraY += e.movementY
-    // if (e.movementX < 0) {
-    //     angleX -= 1
-    //     // angleX %= 360
-    // }
-    // else {
-    //     angleX += 1
-    //     // angleX %= 360
-    // }
-    // if (e.movementY < 0) {
-    //     angleY -= 1
-    //     // angleY %= 360
-    // }
-    // else {
-    //     angleY += 1
-    // }
 }
 
 function onUpPress() {
