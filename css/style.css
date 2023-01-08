@@ -132,3 +132,22 @@ canvas {
     height: 100vh;
     display: block;
 }
+
+._form{
+    text-align: center;
+}
+
+._input {
+    width: 100%;
+    display: flex;
+}
+
+._submit{
+    border-color: white;
+    display: block;
+    text-align: center;
+    font-weight: bold;
+    background-color: white;
+    font-family: 'RollboxLight';
+    src: url(../fonts/RollboxLight.ttf);
+}

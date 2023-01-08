@@ -5,6 +5,7 @@
     <meta charset="utf-8">
     <link rel="stylesheet" href="css/style.css">
 </head>
+<script src="https://cdn.jsdelivr.net/npm/three@0.119.1/build/three.min.js"></script>
 <script src="./js/threejs/build/three.min.js"></script>
 <script src="./js/threejs/js/controls/OrbitControls.js"></script>
 <script src="./js/threejs/threex.keyboardstate.js"></script>
@@ -58,6 +59,13 @@
         <p id="finalText">
             [insert text]
         </p>
+        <div>
+            <form class="_form" id="form" onsubmit="return writeToLeaderboard(document.getElementById('name').value);">
+                <label style="color: white;" for="name">Enter name:</label>
+                <input class="_input" type="text" id="name" name="name">
+                <input class="_submit" type="submit" value="Submit">
+              </form>
+        </div>
         <div class="_finalButton">
             <button id="finalButton">Restart</button>
         </div>
