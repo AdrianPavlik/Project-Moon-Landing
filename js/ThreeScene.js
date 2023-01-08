@@ -29,11 +29,20 @@ let intervalSet = false;
 
 // Camera
 let camera;
+let cameraDistance = 1200
+let maxCameraDistance = 6000
+let minCameraDistance = 1200
+let cameraZoomSpeed = 200;
+let cameraX = 0
+let cameraY = 0
+// let angleX = 0;
+// let angleY = 0;
+let controls;
 
 // Interaction
 let cameraControls;
 let keyboard;
-let keyboardInited = false;
+let inputInited = false;
 let controller;
 
 // Physics
@@ -56,17 +65,17 @@ let airFriction = 0.5;
 
 // Aircraft
 let aircraft, aircraftAsset = new THREE.Object3D();
-let startPos = new CANNON.Vec3(0, 25, 0);
-let thrust, wantsRotateZPos, wantsRotateZNeg, wantsRotateXPos, wantsRotateXNeg, wantsRotateYPos, wantsRotateYNeg = false;
+let startPos = new CANNON.Vec3(0, 20, 0);
+let thrust, wantsRotateZPos, wantsRotateZNeg, wantsRotateXPos, wantsRotateXNeg, wantsRotateYPos,
+    wantsRotateYNeg = false;
 let rotatedZPos, rotatedZNeg, rotatedXPos, rotatedXNeg, rotatedYPos, rotatedYNeg = false;
 let thrustIntensity = 250.0;
-let torqueIntensity = 2000.0;
 let arrowHelper;
 let aircraftDryMass = 1.0;
 let maxAircraftSpeed = 2000;
 let bottomEngine
 
-let rotationX = 0,rotationY = 0, rotationZ = 0
+let rotationX = 0, rotationY = 0, rotationZ = 0
 
 //Loaders
 let textureLoader, gltfLoader, dracoLoader;
@@ -180,12 +189,21 @@ function init() {
 
     //Init everything
     addMenuListeners();
-    initCamera();
+    addFinalListeners()
     initPhysics();
     addObjects();
-    initCamera();
     addLight()
+    initCamera();
+    initControls();
     addGui();
+}
+
+function initControls() {
+    cameraControls = new THREE.OrbitControls(camera, renderer.domElement)
+    cameraControls.enablePan = false
+    cameraControls.enableDamping = true
+    cameraControls.dampingFactor = 1
+    cameraControls.update()
 }
 
 function addObjects() {
@@ -226,6 +244,7 @@ function addObjects() {
         function (gltf) {
             aircraftAsset = gltf.scene;
             setupRocket(aircraftAsset)
+
         }
     )
     matchPhysicalObject(earth);
@@ -264,6 +283,8 @@ function setupRocket(aircraftAsset) {
     bottomEngine.visible = false;
     aircraft.visual.add(bottomEngine);
 
+    aircraft.visual.add(camera)
+
     arrowHelper = new THREE.ArrowHelper(new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 0, 0), 30.0, 0xffff00);
     scene.add(arrowHelper);
 
@@ -289,21 +310,22 @@ function addGui() {
 
 function initCamera() {
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 10000000);
-    cameraControls = new THREE.OrbitControls(camera, renderer.domElement);
-    camera.position.set(0, 0, 500)
+    camera.position.set(cameraX, cameraY, cameraDistance)
 
-    scene.add(camera)
 }
-
 
 function initInput() {
     //Don't init twice
-    if(keyboardInited)
+    if (inputInited)
         return
     else
-        keyboardInited = true
+        inputInited = true
 
     keyboard = new THREEx.KeyboardState();
+
+    document.addEventListener('wheel', (e) => onMouseWheel(e), true);
+    
+    // document.addEventListener('mousemove', (e) => onMouseMove(e), true);
 
     //Keyboard
     keyboard.domElement.addEventListener('keydown', function (event) {
@@ -411,7 +433,7 @@ function addMenuListeners() {
     })
 }
 
-function addFinalListeners(){
+function addFinalListeners() {
     document.getElementById("finalButton").addEventListener("click", (e) => {
         document.getElementById("menuWrap").style.visibility = "visible";
         document.getElementById("final").style.visibility = "hidden";
@@ -461,8 +483,10 @@ function update() {
     // Nastavenia
     updateController(controller);
 
+    cameraControls.update()
+
     // Kamera
-    updateCamera();
+    // updateCamera();
 
     prevDate = Date.now();
 }
@@ -476,7 +500,7 @@ function updateTimer() {
     }
 }
 
-function lost(){
+function lost() {
     restart()
     intervalSet = false
     document.getElementById("info").style.visibility = "hidden";
@@ -497,12 +521,12 @@ function updateSolarSystem() {
 }
 
 function rotateAircraft(axis, direction, rotation) {
-    aircraft.body.angularVelocity = new CANNON.Vec3(0,0,0)
+    aircraft.body.angularVelocity = new CANNON.Vec3(0, 0, 0)
 
     let angle = Math.PI / 200
-    
+
     if (direction === "-") angle *= -1
-    
+
     rotation += angle
 
     // creating new rotation quaternion and multiplying with current to get new quaternion of result rotation
@@ -537,27 +561,27 @@ function updateAircraft() {
 
     //Motory rakety
     if (wantsRotateZPos && !rotatedZPos) {
-        rotationZ = rotateAircraft(new CANNON.Vec3(0,0,1), "+", rotationZ)
+        rotationZ = rotateAircraft(new CANNON.Vec3(0, 0, 1), "+", rotationZ)
     }
 
     if (wantsRotateZNeg && !rotatedZNeg) {
-        rotationZ = rotateAircraft(new CANNON.Vec3(0,0,1), "-", rotationZ)
+        rotationZ = rotateAircraft(new CANNON.Vec3(0, 0, 1), "-", rotationZ)
     }
 
     if (wantsRotateXPos && !rotatedXPos) {
-        rotationX = rotateAircraft(new CANNON.Vec3(1,0,0), "+", rotationX)
+        rotationX = rotateAircraft(new CANNON.Vec3(1, 0, 0), "+", rotationX)
     }
 
     if (wantsRotateXNeg && !rotatedXNeg) {
-        rotationX = rotateAircraft(new CANNON.Vec3(1,0,0), "-", rotationX)
+        rotationX = rotateAircraft(new CANNON.Vec3(1, 0, 0), "-", rotationX)
     }
 
     if (wantsRotateYPos && !rotatedYPos) {
-        rotationY = rotateAircraft(new CANNON.Vec3(0,1,0), "+", rotationY)
+        rotationY = rotateAircraft(new CANNON.Vec3(0, 1, 0), "+", rotationY)
     }
 
     if (wantsRotateYNeg && !rotatedYNeg) {
-        rotationY = rotateAircraft(new CANNON.Vec3(0,1,0), "-", rotationY)
+        rotationY = rotateAircraft(new CANNON.Vec3(0, 1, 0), "-", rotationY)
     }
 
     //When flying - držanie medzernika
@@ -578,11 +602,6 @@ function limitAircraftSpeed() {
         aircraft.body.velocity.normalize();
         aircraft.body.velocity = aircraft.body.velocity.scale(maxAircraftSpeed);
     }
-}
-
-function rotate(z, x) {
-    aircraft.body.torque = aircraft.body.torque.vadd(new CANNON.Vec3(0, 0, 1).scale(x));
-    aircraft.body.torque = aircraft.body.torque.vadd(new CANNON.Vec3(1, 0, 0).scale(z));
 }
 
 function updateAircraftDrag() {
@@ -630,15 +649,12 @@ function updateGravity(physicalObject) {
     physicalObject.gravityDir.normalize();
 }
 
-function updateCamera() {
-    // camera.lookAt(aircraft.position)
+function getDistance(x1, y1, z1, x2, y2, z2) {
+    return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2)
 }
 
 function updateController(controller) {
-    if (controller.trajectory)
-        moonTrajectoryLine.visible = true
-    else
-        moonTrajectoryLine.visible = false
+    moonTrajectoryLine.visible = controller.trajectory;
 
     if (aircraft != null && controller.arrowHelper)
         arrowHelper.visible = true
@@ -661,15 +677,15 @@ function matchPhysicalObject(physicalObject) {
 }
 
 function collision(event) {
-    if (event.body.physicalObject.name == "Moon") {
+    if (event.body.physicalObject.name === "Moon") {
         aircraft.body.velocity = new CANNON.Vec3(0, 0, 0);
         aircraft.body.angularVelocity = new CANNON.Vec3(0, 0, 0);
-        if(intervalSet)
+        if (intervalSet)
             win()
     }
 }
 
-function win(){
+function win() {
     clearInterval(timerInterval)
     intervalSet = false
     document.getElementById("info").style.visibility = "hidden";
@@ -690,6 +706,13 @@ function restart() {
 
     aircraft.body.velocity = new CANNON.Vec3(0, 0, 0);
     aircraft.body.angularVelocity = new CANNON.Vec3(0, 0, 0);
+}
+
+function onMouseWheel(e) {
+    if (e.deltaY > 0 && cameraDistance < maxCameraDistance)
+        cameraDistance += cameraZoomSpeed;
+    else if (e.deltaY < 0 && cameraDistance > minCameraDistance)
+        cameraDistance -= cameraZoomSpeed;
 }
 
 function onUpPress() {
@@ -747,7 +770,7 @@ function onERelease() {
 }
 
 function onThrustPress() {
-    if(!intervalSet)
+    if (!intervalSet)
         timerInterval = setInterval(updateTimer, 1000);
     intervalSet = true
     thrust = true;
