@@ -1,0 +1,10 @@
+1. brano 10
+2. fero 20
+3. stanci 30
+4. pista 40
+5. ado 50
+6. martin 60
+7. anca 70
+8. maria 80
+9. jano 90
+10. jozo 100
