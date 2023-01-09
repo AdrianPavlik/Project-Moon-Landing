@@ -60,7 +60,7 @@
             [insert text]
         </p>
         <div>
-            <form class="_form" id="form" onsubmit="return writeToLeaderboard(document.getElementById('name').value);">
+            <form class="_form" id="form" onsubmit="writeToLeaderboard(document.getElementById('name').value);return false;">
                 <label style="color: white;" for="name">Enter name:</label>
                 <input class="_input" type="text" id="name" name="name">
                 <input class="_submit" type="submit" value="Submit">

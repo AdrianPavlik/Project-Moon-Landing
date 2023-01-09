@@ -47,6 +47,20 @@ let controller;
 let hasWon = false;
 let completeTime = 0;
 
+// Leaderboard
+let leaderboard = {
+    "brano": 10,
+    "fero": 20,
+    "stanci": 30,
+    "pista": 40,
+    "ado": 50,
+    "martin": 60,
+    "anca": 70,
+    "maria": 80,
+    "jano": 90,
+    "jozo": 100,
+}
+
 // Physics
 const G = 6.674e-1;
 let world;
@@ -84,6 +98,7 @@ let textureLoader, gltfLoader, dracoLoader;
 
 //Wait to load whole page
 window.onload = () => {
+    localStorage.setItem("leaderboard", JSON.stringify(leaderboard))
     init();
     render();
 }
@@ -699,34 +714,20 @@ function win(time) {
 }
 
 function writeToLeaderboard(name){
-    let leaderboard
-    fetch('http://127.0.0.1:5500/leaderboard.txt').then((res) => consolee.log(res))
-        .then((res) => {
-            if(res.ok){
-                res.text()
-                .then((data) => {
-                    leaderboard = data.split('\n')
-                    leaderboard.push(`11. ${name} ${completeTime}`)
-                    sortedLeaderboard = leaderboard.sort((a, b) => {
-                        const numA = parseInt(a.split(' ').slice(-1)[0]);
-                        const numB = parseInt(b.split(' ').slice(-1)[0]);
-                        return numA - numB
-                    })
-                    sortedLeaderboard = sortedLeaderboard.split('\n')
-                    for (let i = 0; i < sortedLeaderboard.length; i++) {
-                        let line = sortedLeaderboard[i].split(' ') 
-                        line[0] = `${i.toString()}.` 
-                        line = line.join(' ')
-                        sortedLeaderboard[i] = line
-                    }
-                    sortedLeaderboard.join('\n');
-                })
-            }
-        })
-        
-    console.log(leaderboard)
-    // console.log(maxTime - currentTime)
-    // console.log(name)
+    let lb = JSON.parse(localStorage.getItem("leaderboard"))
+
+    lb[name] = completeTime;
+
+    let leaderboardArray = Object.entries(lb);
+
+    leaderboardArray.sort((a, b) => a[1] - b[1]);
+    leaderboardArray.pop();
+
+    let sortedLeaderboard = Object.fromEntries(leaderboardArray);
+
+    localStorage.setItem("leaderboard", JSON.stringify(sortedLeaderboard))
+
+    console.log(Object.entries(sortedLeaderboard))
 }
 
 function lerp(min, max, value) {
