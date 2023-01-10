@@ -36,7 +36,7 @@ let cameraControls;
 let keyboard;
 let inputInited = false;
 let controller;
-let hasWon = false;
+let hasEnded = false;
 
 // Leaderboard
 let leaderboard = {
@@ -334,53 +334,57 @@ function initInput() {
     //Keyboard
     keyboard.domElement.addEventListener('keydown', function (event) {
         startTimer()
-        if (keyboard.eventMatches(event, 'w') || keyboard.eventMatches(event, 'up')) {
-            onUpPress()
-        }
-        if (keyboard.eventMatches(event, 'a') || keyboard.eventMatches(event, 'left')) {
-            onLeftPress();
-        }
-        if (keyboard.eventMatches(event, 's') || keyboard.eventMatches(event, 'down')) {
-            onDownPress()
-        }
-        if (keyboard.eventMatches(event, 'd') || keyboard.eventMatches(event, 'right')) {
-            onRightPress();
-        }
-        if (keyboard.eventMatches(event, 'q')) {
-            onQPress()
-        }
-        if (keyboard.eventMatches(event, 'e')) {
-            onEPress();
-        }
-        if (keyboard.eventMatches(event, 'r')) {
-            onRestartPress();
-        }
-        if (keyboard.eventMatches(event, 'space')) {
-            onThrustPress();
+        if(!hasEnded){
+            if (keyboard.eventMatches(event, 'w') || keyboard.eventMatches(event, 'up')) {
+                onUpPress()
+            }
+            if (keyboard.eventMatches(event, 'a') || keyboard.eventMatches(event, 'left')) {
+                onLeftPress();
+            }
+            if (keyboard.eventMatches(event, 's') || keyboard.eventMatches(event, 'down')) {
+                onDownPress()
+            }
+            if (keyboard.eventMatches(event, 'd') || keyboard.eventMatches(event, 'right')) {
+                onRightPress();
+            }
+            if (keyboard.eventMatches(event, 'q')) {
+                onQPress()
+            }
+            if (keyboard.eventMatches(event, 'e')) {
+                onEPress();
+            }
+            if (keyboard.eventMatches(event, 'r')) {
+                onRestartPress();
+            }
+            if (keyboard.eventMatches(event, 'space')) {
+                onThrustPress();
+            }
         }
     })
 
     keyboard.domElement.addEventListener('keyup', function (event) {
-        if (keyboard.eventMatches(event, 'w') || keyboard.eventMatches(event, 'up')) {
-            onUpRelease();
-        }
-        if (keyboard.eventMatches(event, 'a') || keyboard.eventMatches(event, 'left')) {
-            onLeftRelease();
-        }
-        if (keyboard.eventMatches(event, 'd') || keyboard.eventMatches(event, 'right')) {
-            onRightRelease();
-        }
-        if (keyboard.eventMatches(event, 's') || keyboard.eventMatches(event, 'down')) {
-            onDownRelease();
-        }
-        if (keyboard.eventMatches(event, 'q')) {
-            onQRelease()
-        }
-        if (keyboard.eventMatches(event, 'e')) {
-            onERelease();
-        }
-        if (keyboard.eventMatches(event, 'space')) {
-            onThrustRelease();
+        if(!hasEnded){
+            if (keyboard.eventMatches(event, 'w') || keyboard.eventMatches(event, 'up')) {
+                onUpRelease();
+            }
+            if (keyboard.eventMatches(event, 'a') || keyboard.eventMatches(event, 'left')) {
+                onLeftRelease();
+            }
+            if (keyboard.eventMatches(event, 'd') || keyboard.eventMatches(event, 'right')) {
+                onRightRelease();
+            }
+            if (keyboard.eventMatches(event, 's') || keyboard.eventMatches(event, 'down')) {
+                onDownRelease();
+            }
+            if (keyboard.eventMatches(event, 'q')) {
+                onQRelease()
+            }
+            if (keyboard.eventMatches(event, 'e')) {
+                onERelease();
+            }
+            if (keyboard.eventMatches(event, 'space')) {
+                onThrustRelease();
+            }
         }
     })
 }
@@ -508,6 +512,7 @@ function updateTimer() {
 function lost() {
     restart()
     intervalSet = false
+    
     document.getElementById("info").style.visibility = "hidden";
     document.getElementById("timer").style.visibility = "hidden";
     document.getElementById("final").style.visibility = "visible";
@@ -604,6 +609,18 @@ function updateAircraft() {
     updateAircraftDrag()
 }
 
+function showMenu() {
+    document.getElementById("menuWrap").style.visibility = "visible";
+    document.getElementById("leaderboard").style.visibility = "visible";
+    document.getElementById("info").style.visibility = "hidden";
+    document.getElementById("timer").style.visibility = "hidden";
+    document.getElementById("timerText").innerHTML = maxTime;
+    document.getElementById("final").style.visibility = "hidden";
+    document.getElementById("form").style.visibility = "hidden";
+    hasEnded = true
+    dat.GUI.toggle();
+}
+
 function limitAircraftSpeed() {
     if (aircraft.body.velocity.length() > maxAircraftSpeed) {
         aircraft.body.velocity.normalize();
@@ -687,13 +704,13 @@ function collision(event) {
     if (event.body.physicalObject.name === "Moon") {
         aircraft.body.velocity = new CANNON.Vec3(0, 0, 0);
         aircraft.body.angularVelocity = new CANNON.Vec3(0, 0, 0);
-        if (intervalSet && !hasWon)
+        if (intervalSet && !hasEnded)
             win()
     }
 }
 
 function win(time) {
-    hasWon = true
+    hasEnded = true
     completeTime = maxTime - currentTime
     clearInterval(timerInterval)
     intervalSet = false
@@ -738,6 +755,9 @@ function printLeaderboard(){
 }
 
 function writeToLeaderboard(name) {
+    if (name == '') {
+        return
+    }
     document.getElementById('name').value = ''
 
     let lb = JSON.parse(localStorage.getItem("leaderboard"))
@@ -763,8 +783,7 @@ function lerp(min, max, value) {
 }
 
 function restart() {
-    
-    hasWon = false
+    hasEnded = false
     aircraft.body.position.copy(startPos);
     aircraft.body.quaternion = new CANNON.Quaternion();
 
