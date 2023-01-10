@@ -26,26 +26,20 @@ let maxTime = 5.5 * 60; //Default
 let currentTime;
 let timerInterval;
 let intervalSet = false;
+let completeTime = 0;
 
 // Camera
 let camera;
 let cameraDistance = 1200
-let maxCameraDistance = 6000
-let minCameraDistance = 1200
 let cameraZoomSpeed = 200;
-let cameraX = 0
-let cameraY = 0
-// let angleX = 0;
-// let angleY = 0;
-let controls;
 
 // Interaction
+let controls;
 let cameraControls;
 let keyboard;
 let inputInited = false;
 let controller;
 let hasWon = false;
-let completeTime = 0;
 
 // Leaderboard
 let leaderboard = {
@@ -328,7 +322,7 @@ function addGui() {
 
 function initCamera() {
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 10000000);
-    camera.position.set(cameraX, cameraY, cameraDistance)
+    camera.position.set(0, 0, cameraDistance)
 
 }
 
@@ -346,6 +340,7 @@ function initInput() {
 
     //Keyboard
     keyboard.domElement.addEventListener('keydown', function (event) {
+        startTimer()
         if (keyboard.eventMatches(event, 'w') || keyboard.eventMatches(event, 'up')) {
             onUpPress()
         }
@@ -448,11 +443,13 @@ function addMenuListeners() {
         maxTime = 5.5 * 60;
         start()
     })
+    printLeaderboard()
 }
 
 function addFinalListeners() {
     document.getElementById("finalButton").addEventListener("click", (e) => {
         document.getElementById("menuWrap").style.visibility = "visible";
+        document.getElementById("leaderboard").style.visibility = "visible";
         document.getElementById("final").style.visibility = "hidden";
         restart();
     })
@@ -462,6 +459,7 @@ function start() {
     currentTime = maxTime;
     initInput();
     document.getElementById("menuWrap").style.visibility = "hidden";
+    document.getElementById("leaderboard").style.visibility = "hidden";
     document.getElementById("info").style.visibility = "visible";
     document.getElementById("timer").style.visibility = "visible";
     document.getElementById("timerText").innerHTML = maxTime;
@@ -711,6 +709,39 @@ function win(time) {
     dat.GUI.toggleHide();
 }
 
+function createRow(index, name, score){
+    let row = document.createElement('div');
+    row.setAttribute("class", "row")
+
+    name_el = document.createElement('div');
+    name_el.setAttribute("class", "name")
+    name_el.innerHTML = `${index + 1}.   ${name}   ${score}`;
+
+    // score_el = document.createElement('div');
+    // score_el.setAttribute("class", "score")
+    // score_el.innerHTML = score;
+
+    row.appendChild(name_el)
+    // row.appendChild(score_el)
+
+    return row;
+}
+
+function printLeaderboard(){
+    let lb_el = document.getElementById("leaderboard")
+    lb_el.innerHTML = ''
+    let lb = JSON.parse(localStorage.getItem("leaderboard"))
+    keys = Object.keys(lb)
+    values = Object.values(lb)
+    for (let i = 0; i < 10; i++) {
+        lb_el.appendChild(createRow(i, keys[i], values[i]))
+    }
+    let top3 = Array.prototype.slice.call(lb_el.children, 0, 3)
+    top3[0].style.color = "gold"
+    top3[1].style.color = "silver"
+    top3[2].style.color = "#cd7f32"
+}
+
 function writeToLeaderboard(name){
     let lb = JSON.parse(localStorage.getItem("leaderboard"))
 
@@ -726,6 +757,7 @@ function writeToLeaderboard(name){
     localStorage.setItem("leaderboard", JSON.stringify(sortedLeaderboard))
 
     console.log(Object.entries(sortedLeaderboard))
+    printLeaderboard()
 }
 
 function lerp(min, max, value) {
@@ -743,10 +775,16 @@ function restart() {
 }
 
 function onMouseWheel(e) {
-    if (e.deltaY > 0 && cameraDistance < maxCameraDistance)
+    if (e.deltaY > 0 && cameraDistance < MAX_CAMERA_DISTANCE)
         cameraDistance += cameraZoomSpeed;
-    else if (e.deltaY < 0 && cameraDistance > minCameraDistance)
+    else if (e.deltaY < 0 && cameraDistance > MIN_CAMERA_DISTANCE)
         cameraDistance -= cameraZoomSpeed;
+}
+
+function startTimer(){
+    if (!intervalSet)
+        timerInterval = setInterval(updateTimer, 1000);
+    intervalSet = true
 }
 
 function onUpPress() {
@@ -804,9 +842,6 @@ function onERelease() {
 }
 
 function onThrustPress() {
-    if (!intervalSet)
-        timerInterval = setInterval(updateTimer, 1000);
-    intervalSet = true
     thrust = true;
 }
 

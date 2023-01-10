@@ -10,6 +10,7 @@
 
 
 #menuWrap {
+
     position: absolute;
     height: 100vh;
     width: 100%;
@@ -148,6 +149,15 @@ canvas {
     text-align: center;
     font-weight: bold;
     background-color: white;
-    font-family: 'RollboxLight';
-    src: url(../fonts/RollboxLight.ttf);
+    font-family: 'GroupeMedium';
+}
+
+.leaderboard {
+    font-size: large;
+    margin-left: 5%;
+    font-family: "RollboxLight";;
+    color: white;
+    position: absolute;
+    top: 50%;
+    float: left;
 }
