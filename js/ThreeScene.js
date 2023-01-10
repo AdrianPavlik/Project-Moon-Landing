@@ -225,7 +225,7 @@ function initControls() {
 
 function addObjects() {
     // Axis
-    //scene.add(new THREE.AxisHelper(5));
+    scene.add(new THREE.AxisHelper(5));
 
     universe = new SphereWithoutBody("Universe", 40000, new THREE.Vector3(0, 0, 0), physicalMaterial, universeImage, 0.0);
     sun = new SphereWithoutBody("Sun", 3000, new THREE.Vector3(15000, 0, 0), physicalMaterial, sunImage, 0.0);
@@ -300,6 +300,7 @@ function setupRocket(aircraftAsset) {
     bottomEngine.visible = false;
     aircraft.visual.add(bottomEngine);
 
+    // To make camera follow aircraft
     aircraft.visual.add(camera)
 
     arrowHelper = new THREE.ArrowHelper(new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 0, 0), 30.0, 0xffff00);
@@ -501,9 +502,6 @@ function update() {
 
     cameraControls.update()
 
-    // Kamera
-    // updateCamera();
-
     prevDate = Date.now();
 }
 
@@ -530,8 +528,8 @@ function updateSolarSystem() {
     let rotationOnTrajectoryTime = (clock.getElapsedTime() * moonRevolveSpeed) % 1;
     let v = new THREE.Vector3();
     moonTrajectory.getPointAt(rotationOnTrajectoryTime, v)
-    // moonRotation.position.x = v.x;
-    // moonRotation.position.z = v.y;
+    moonRotation.position.x = v.x;
+    moonRotation.position.z = v.y;
     moon.visual.rotation.y -= planetVisualRotationSpeed * deltaTime;
     earth.visual.rotation.y -= planetVisualRotationSpeed * deltaTime;
 }
@@ -575,7 +573,7 @@ function updateAircraft() {
     arrowHelper.setLength(length);
     arrowHelper.position.copy(aircraft.visual.position);
 
-    //Motory rakety
+    //Rotation of rocket
     if (wantsRotateZPos && !rotatedZPos) {
         rotationZ = rotateAircraft(new CANNON.Vec3(0, 0, 1), "+", rotationZ)
     }
