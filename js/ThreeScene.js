@@ -1,8 +1,5 @@
 let container, renderer, scene;
 
-const MAX_CAMERA_DISTANCE = 7000
-const MIN_CAMERA_DISTANCE = 500
-
 const universeImage = 'texture/universe.jpg'
 const sunImage = 'texture/sun.jpg'
 const earthImage = 'texture/earth.jpg'
@@ -322,8 +319,7 @@ function addGui() {
 
 function initCamera() {
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 10000000);
-    camera.position.set(0, 0, cameraDistance)
-
+    camera.position.set(0, 0, 500)
 }
 
 function initInput() {
@@ -334,9 +330,6 @@ function initInput() {
         inputInited = true
 
     keyboard = new THREEx.KeyboardState();
-
-    document.addEventListener('wheel', (e) => onMouseWheel(e), true);
-    
 
     //Keyboard
     keyboard.domElement.addEventListener('keydown', function (event) {
@@ -408,13 +401,13 @@ function initPhysics() {
 function addMenuListeners() {
     //HARD BUTTON
     document.getElementById("hard").addEventListener("mouseover", (e) => {
-        document.getElementById("hard").innerHTML = "1:30 minute"
+        document.getElementById("hard").innerHTML = "1 minute"
     })
     document.getElementById("hard").addEventListener("mouseleave", (e) => {
         document.getElementById("hard").innerHTML = "HARD"
     })
     document.getElementById("hard").addEventListener("click", (e) => {
-        maxTime = 1.5 * 60;
+        maxTime = 1 * 60;
         start()
     })
 
@@ -518,6 +511,8 @@ function lost() {
     document.getElementById("info").style.visibility = "hidden";
     document.getElementById("timer").style.visibility = "hidden";
     document.getElementById("final").style.visibility = "visible";
+    document.getElementById("leaderboard").style.visibility = "visible";
+    document.getElementById("form").style.visibility = "hidden";    
     document.getElementById("finalText").innerHTML = "You lost!";
     dat.GUI.toggleHide();
 }
@@ -714,15 +709,9 @@ function createRow(index, name, score){
     row.setAttribute("class", "row")
 
     name_el = document.createElement('div');
-    name_el.setAttribute("class", "name")
     name_el.innerHTML = `${index + 1}.   ${name}   ${score}`;
 
-    // score_el = document.createElement('div');
-    // score_el.setAttribute("class", "score")
-    // score_el.innerHTML = score;
-
     row.appendChild(name_el)
-    // row.appendChild(score_el)
 
     return row;
 }
@@ -730,19 +719,25 @@ function createRow(index, name, score){
 function printLeaderboard(){
     let lb_el = document.getElementById("leaderboard")
     lb_el.innerHTML = ''
+
+    let title = document.createElement('div');
+    title.innerHTML = "Leaderboard:"
+
+    lb_el.appendChild(title)
+
     let lb = JSON.parse(localStorage.getItem("leaderboard"))
     keys = Object.keys(lb)
     values = Object.values(lb)
     for (let i = 0; i < 10; i++) {
         lb_el.appendChild(createRow(i, keys[i], values[i]))
     }
-    let top3 = Array.prototype.slice.call(lb_el.children, 0, 3)
+    let top3 = Array.prototype.slice.call(lb_el.children, 1, 4)
     top3[0].style.color = "gold"
     top3[1].style.color = "silver"
     top3[2].style.color = "#cd7f32"
 }
 
-function writeToLeaderboard(name){
+function writeToLeaderboard(name) {
     let lb = JSON.parse(localStorage.getItem("leaderboard"))
 
     lb[name] = completeTime;

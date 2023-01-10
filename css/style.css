@@ -140,10 +140,14 @@ canvas {
 
 ._input {
     width: 100%;
+    min-height: 50px;
     display: flex;
+    font-size: 20px;
 }
 
 ._submit{
+    margin-top: 10px;
+    margin-left: 41%;
     border-color: white;
     display: block;
     text-align: center;
