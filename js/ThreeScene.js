@@ -738,6 +738,8 @@ function printLeaderboard(){
 }
 
 function writeToLeaderboard(name) {
+    document.getElementById('name').value = ''
+
     let lb = JSON.parse(localStorage.getItem("leaderboard"))
 
     lb[name] = completeTime;
@@ -761,10 +763,12 @@ function lerp(min, max, value) {
 }
 
 function restart() {
+    
     hasWon = false
     aircraft.body.position.copy(startPos);
     aircraft.body.quaternion = new CANNON.Quaternion();
 
+    camera.position.set(0, 0, 500)
     aircraft.body.velocity = new CANNON.Vec3(0, 0, 0);
     aircraft.body.angularVelocity = new CANNON.Vec3(0, 0, 0);
 }
