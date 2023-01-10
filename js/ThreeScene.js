@@ -44,6 +44,22 @@ let cameraControls;
 let keyboard;
 let inputInited = false;
 let controller;
+let hasWon = false;
+let completeTime = 0;
+
+// Leaderboard
+let leaderboard = {
+    "brano": 10,
+    "fero": 20,
+    "stanci": 30,
+    "pista": 40,
+    "ado": 50,
+    "martin": 60,
+    "anca": 70,
+    "maria": 80,
+    "jano": 90,
+    "jozo": 100,
+}
 
 // Physics
 const G = 6.674e-1;
@@ -82,6 +98,7 @@ let textureLoader, gltfLoader, dracoLoader;
 
 //Wait to load whole page
 window.onload = () => {
+    localStorage.setItem("leaderboard", JSON.stringify(leaderboard))
     init();
     render();
 }
@@ -325,7 +342,6 @@ function initInput() {
 
     document.addEventListener('wheel', (e) => onMouseWheel(e), true);
     
-    // document.addEventListener('mousemove', (e) => onMouseMove(e), true);
 
     //Keyboard
     keyboard.domElement.addEventListener('keydown', function (event) {
@@ -514,8 +530,8 @@ function updateSolarSystem() {
     let rotationOnTrajectoryTime = (clock.getElapsedTime() * moonRevolveSpeed) % 1;
     let v = new THREE.Vector3();
     moonTrajectory.getPointAt(rotationOnTrajectoryTime, v)
-    moonRotation.position.x = v.x;
-    moonRotation.position.z = v.y;
+    // moonRotation.position.x = v.x;
+    // moonRotation.position.z = v.y;
     moon.visual.rotation.y -= planetVisualRotationSpeed * deltaTime;
     earth.visual.rotation.y -= planetVisualRotationSpeed * deltaTime;
 }
@@ -680,12 +696,14 @@ function collision(event) {
     if (event.body.physicalObject.name === "Moon") {
         aircraft.body.velocity = new CANNON.Vec3(0, 0, 0);
         aircraft.body.angularVelocity = new CANNON.Vec3(0, 0, 0);
-        if (intervalSet)
+        if (intervalSet && !hasWon)
             win()
     }
 }
 
-function win() {
+function win(time) {
+    hasWon = true
+    completeTime = maxTime - currentTime
     clearInterval(timerInterval)
     intervalSet = false
     document.getElementById("info").style.visibility = "hidden";
@@ -695,12 +713,30 @@ function win() {
     dat.GUI.toggleHide();
 }
 
+function writeToLeaderboard(name){
+    let lb = JSON.parse(localStorage.getItem("leaderboard"))
+
+    lb[name] = completeTime;
+
+    let leaderboardArray = Object.entries(lb);
+
+    leaderboardArray.sort((a, b) => a[1] - b[1]);
+    leaderboardArray.pop();
+
+    let sortedLeaderboard = Object.fromEntries(leaderboardArray);
+
+    localStorage.setItem("leaderboard", JSON.stringify(sortedLeaderboard))
+
+    console.log(Object.entries(sortedLeaderboard))
+}
+
 function lerp(min, max, value) {
     let l = (value - min) / (max - min);
     return Math.min(Math.max(l, 0.0), 1.0);
 }
 
 function restart() {
+    hasWon = false
     aircraft.body.position.copy(startPos);
     aircraft.body.quaternion = new CANNON.Quaternion();
 
