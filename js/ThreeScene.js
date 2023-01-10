@@ -1,8 +1,5 @@
 let container, renderer, scene;
 
-const MAX_CAMERA_DISTANCE = 7000
-const MIN_CAMERA_DISTANCE = 500
-
 const universeImage = 'texture/universe.jpg'
 const sunImage = 'texture/sun.jpg'
 const earthImage = 'texture/earth.jpg'
@@ -29,14 +26,6 @@ let intervalSet = false;
 
 // Camera
 let camera;
-let cameraDistance = 1200
-let maxCameraDistance = 6000
-let minCameraDistance = 1200
-let cameraZoomSpeed = 200;
-let cameraX = 0
-let cameraY = 0
-// let angleX = 0;
-// let angleY = 0;
 let controls;
 
 // Interaction
@@ -328,8 +317,7 @@ function addGui() {
 
 function initCamera() {
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 10000000);
-    camera.position.set(cameraX, cameraY, cameraDistance)
-
+    camera.position.set(0, 0, 500)
 }
 
 function initInput() {
@@ -340,9 +328,6 @@ function initInput() {
         inputInited = true
 
     keyboard = new THREEx.KeyboardState();
-
-    document.addEventListener('wheel', (e) => onMouseWheel(e), true);
-    
 
     //Keyboard
     keyboard.domElement.addEventListener('keydown', function (event) {
@@ -419,7 +404,7 @@ function addMenuListeners() {
         document.getElementById("hard").innerHTML = "HARD"
     })
     document.getElementById("hard").addEventListener("click", (e) => {
-        maxTime = 1.5 * 60;
+        maxTime = 0.1 * 60;
         start()
     })
 
@@ -711,7 +696,7 @@ function win(time) {
     dat.GUI.toggleHide();
 }
 
-function writeToLeaderboard(name){
+function writeToLeaderboard(name) {
     let lb = JSON.parse(localStorage.getItem("leaderboard"))
 
     lb[name] = completeTime;
@@ -740,13 +725,6 @@ function restart() {
 
     aircraft.body.velocity = new CANNON.Vec3(0, 0, 0);
     aircraft.body.angularVelocity = new CANNON.Vec3(0, 0, 0);
-}
-
-function onMouseWheel(e) {
-    if (e.deltaY > 0 && cameraDistance < maxCameraDistance)
-        cameraDistance += cameraZoomSpeed;
-    else if (e.deltaY < 0 && cameraDistance > minCameraDistance)
-        cameraDistance -= cameraZoomSpeed;
 }
 
 function onUpPress() {
