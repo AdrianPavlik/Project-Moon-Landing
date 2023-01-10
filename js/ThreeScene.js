@@ -363,28 +363,26 @@ function initInput() {
     })
 
     keyboard.domElement.addEventListener('keyup', function (event) {
-        if(!hasEnded){
-            if (keyboard.eventMatches(event, 'w') || keyboard.eventMatches(event, 'up')) {
-                onUpRelease();
-            }
-            if (keyboard.eventMatches(event, 'a') || keyboard.eventMatches(event, 'left')) {
-                onLeftRelease();
-            }
-            if (keyboard.eventMatches(event, 'd') || keyboard.eventMatches(event, 'right')) {
-                onRightRelease();
-            }
-            if (keyboard.eventMatches(event, 's') || keyboard.eventMatches(event, 'down')) {
-                onDownRelease();
-            }
-            if (keyboard.eventMatches(event, 'q')) {
-                onQRelease()
-            }
-            if (keyboard.eventMatches(event, 'e')) {
-                onERelease();
-            }
-            if (keyboard.eventMatches(event, 'space')) {
-                onThrustRelease();
-            }
+        if (keyboard.eventMatches(event, 'w') || keyboard.eventMatches(event, 'up')) {
+            onUpRelease();
+        }
+        if (keyboard.eventMatches(event, 'a') || keyboard.eventMatches(event, 'left')) {
+            onLeftRelease();
+        }
+        if (keyboard.eventMatches(event, 'd') || keyboard.eventMatches(event, 'right')) {
+            onRightRelease();
+        }
+        if (keyboard.eventMatches(event, 's') || keyboard.eventMatches(event, 'down')) {
+            onDownRelease();
+        }
+        if (keyboard.eventMatches(event, 'q')) {
+            onQRelease()
+        }
+        if (keyboard.eventMatches(event, 'e')) {
+            onERelease();
+        }
+        if (keyboard.eventMatches(event, 'space')) {
+            onThrustRelease();
         }
     })
 }
@@ -445,6 +443,12 @@ function addMenuListeners() {
 
 function addFinalListeners() {
     document.getElementById("finalButton").addEventListener("click", (e) => {
+        document.getElementById("menuWrap").style.visibility = "visible";
+        document.getElementById("leaderboard").style.visibility = "visible";
+        document.getElementById("final").style.visibility = "hidden";
+        restart();
+    })
+    document.getElementById("submit").addEventListener("click", (e) => {
         document.getElementById("menuWrap").style.visibility = "visible";
         document.getElementById("leaderboard").style.visibility = "visible";
         document.getElementById("final").style.visibility = "hidden";
@@ -607,18 +611,6 @@ function updateAircraft() {
     aircraft.body.mass = aircraftDryMass;
 
     updateAircraftDrag()
-}
-
-function showMenu() {
-    document.getElementById("menuWrap").style.visibility = "visible";
-    document.getElementById("leaderboard").style.visibility = "visible";
-    document.getElementById("info").style.visibility = "hidden";
-    document.getElementById("timer").style.visibility = "hidden";
-    document.getElementById("timerText").innerHTML = maxTime;
-    document.getElementById("final").style.visibility = "hidden";
-    document.getElementById("form").style.visibility = "hidden";
-    hasEnded = true
-    dat.GUI.toggle();
 }
 
 function limitAircraftSpeed() {
